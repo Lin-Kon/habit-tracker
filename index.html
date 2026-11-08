@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Life OS: habit tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main>
+<div class="hdr"><h1>Life OS</h1><div class="navbtns"><button id="back" class="nb" disabled aria-label="Back">‹ Back</button><button id="fwd" class="nb" disabled aria-label="Forward">Forward ›</button></div></div>
+<p class="sub" id="sub"></p>
+<div class="tabs">
+  <button class="tab" data-view="day"><span>📝</span>Log</button>
+  <button class="tab" data-view="cal"><span>🗓️</span>Calendar</button>
+  <button class="tab" data-view="rep"><span>📊</span>Reports</button>
+  <button class="tab" data-view="badge"><span>🏆</span>Badges</button>
+  <button class="tab" data-view="hab"><span>✅</span>Habits</button>
+  <button class="tab" data-view="set"><span>⚙️</span>Settings</button>
+</div>
+<div id="view"></div>
+</main>
+<script src="core.js"></script>
+<script src="badges.js"></script>
+<script src="sample.js"></script>
+<script src="templates.js"></script>
+<script src="view-day.js"></script>
+<script src="view-calendar.js"></script>
+<script src="view-reports.js"></script>
+<script src="view-habits.js"></script>
+<script src="view-settings.js"></script>
+<script src="view-badges.js"></script>
+<script src="ui.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

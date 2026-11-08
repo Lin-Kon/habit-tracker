@@ -1,0 +1,54 @@
+/* view-habits.js: the Habits tab (compact grouped list, inline edit panel, new-habit form, reorder mode) plus shared pickers. */
+const swatches=(attr,cur)=>'<div class="sw">'+PAL.map(c=>'<button type="button" '+attr+'="'+c+'" style="--c:'+c+'" aria-pressed="'+(c===cur)+'" aria-label="Colour '+c+'"></button>').join("")+"</div>";
+const catSel=(attr,cur)=>'<select '+attr+' aria-label="Category">'+cats.map(c=>'<option value="'+c.id+'"'+(c.id===cur?" selected":"")+">"+esc(c.name)+"</option>").join("")+"</select>";
+const iconPicker=(attr,cur,none)=>'<div class="ip">'+(none?'<button type="button" '+attr+'="" aria-pressed="'+!cur+'" aria-label="No icon">∅</button>':"")+ICONS.map(i=>'<button type="button" '+attr+'="'+i+'" aria-pressed="'+(i===cur)+'">'+i+"</button>").join("")+"</div>";
+const periodSel=(attr,cur)=>'<select '+attr+' aria-label="Finish by"><option value="">No deadline</option>'+settings.periods.map(p=>'<option value="'+p.id+'"'+(p.id===cur?" selected":"")+">"+esc(p.name)+" (by "+p.to+")</option>").join("")+"</select>";
+const FREQS=[["daily","Every day"],["weekdays","Weekdays"],["weekends","Weekends"],["days","Specific days"],["weekly","Days per week"]];
+const freqSel=x=>'<label class="note">How often</label><select data-f="freq" data-id="'+x.id+'" aria-label="How often">'+FREQS.map(([v,l])=>'<option value="'+v+'"'+(freq(x).t===v?" selected":"")+">"+l+"</option>").join("")+"</select>";
+function freqExtra(x){
+  const f=freq(x),id='data-id="'+x.id+'"';
+  if(f.t==="days")return '<div class="dsel">'+wdOrder().map(w=>'<button type="button" data-ed="'+w+'" '+id+' aria-pressed="'+(f.days||[]).includes(w)+'">'+WD[w]+"</button>").join("")+"</div>";
+  if(f.t==="weekly")return '<div><label class="note">Days per week</label><input data-f="fn" '+id+' type="number" min="1" max="7" value="'+(f.n||3)+'"></div>';
+  return""}
+function slotsUI(x){
+  const id='data-id="'+x.id+'"';
+  return '<label class="note">Several times a day? Type session names separated by commas, e.g. Morning, Afternoon, Night. Names must be different. Leave empty for once a day.</label><input data-f="slots" '+id+' value="'+esc((x.slots||[]).map(s=>s.name).join(", "))+'" placeholder="Morning, Afternoon, Night">'
+   +(hasSlots(x)?'<div class="slrows">'+x.slots.map(s=>'<div class="slrow"><span>'+esc(s.name)+"</span>"+periodSel('data-slby="'+s.id+'" '+id,s.by)+"</div>").join("")+"</div>"+(x.type==="yes"?'<label class="note">Sessions needed per day</label><input data-f="need" '+id+' type="number" min="1" max="'+x.slots.length+'" value="'+(x.need||x.slots.length)+'">':""):"")}
+/* The 66-day cycle line is only shown in the last 14 days (or after the cycle ends). */
+const warnChip=t=>'<span class="warnchip">⚠ '+t+"</span>";
+const leftText=h=>{const d=daysLeft(h);return d<0?"Cycle complete":d===0?"Ends today":d===1?"Ends tomorrow":"Ends in "+d+" days"};
+const cycNote=h=>h.type==="group"?"":h.created>TODAY()?"Starts "+fmt(h.created,{day:"numeric",month:"short"}):nearEnd(h)?warnChip(leftText(h)):"";
+function cycUI(x){
+  if(!nearEnd(x))return"";
+  const e=cycleEnd(x),d=daysLeft(x);
+  return '<div class="cycbox">'+warnChip(leftText(x))+" "+(d<0?"The cycle is complete. The habit stopped appearing on "+fmt(e,{day:"numeric",month:"short",year:"numeric"})+".":"Day "+dayNo(x,TODAY())+" of "+WINDOW*(x.cycles||1)+". The habit appears until "+fmt(e,{day:"numeric",month:"short",year:"numeric"})+".")+' <button type="button" class="link" data-extend="'+x.id+'">Add 66 more days</button></div>'}
+const newForm=()=>'<form id="f" novalidate><input id="n" maxlength="60" placeholder="Habit name, e.g. English grammar" aria-label="Habit name" autocomplete="off"><p class="err" id="ferr" role="alert" hidden></p>'+catSel('id="cat"',cats[0].id)+'<select id="t" aria-label="Habit type"><option value="yes">Yes or no</option><option value="num">A number (minutes, glasses, pages…)</option><option value="time">A time of day (wake up, meals…)</option><option value="group">Group (checklist of sub-habits)</option></select><div class="row" id="numopts" hidden><input id="u" maxlength="14" placeholder="Unit, e.g. minutes" aria-label="Unit"><input id="g" type="number" min="0" step="any" inputmode="decimal" placeholder="Daily goal (optional)" aria-label="Daily goal"></div><div id="timeopts" hidden><label class="note" for="tt">On or before (optional)</label><input id="tt" type="time"></div><div id="sdwrap"><label class="note" for="sd">Start date. Set once, up to 7 days back (to fill in the past) or 7 days ahead. It can’t be changed after the habit is added.</label><input id="sd" type="date" value="'+TODAY()+'" min="'+addDays(TODAY(),-7)+'" max="'+addDays(TODAY(),7)+'"></div><p class="note">After adding, the edit panel opens so you can set how often, several sessions a day, a finish-by time, details and more.</p><button class="add">Add habit</button></form>';
+function editPanel(x){
+  const id='data-id="'+x.id+'"',g=x.type==="group",S=hasSlots(x),groups=habits.filter(h=>h.type==="group"&&h.id!==x.id&&!h.archived),par=x.parent&&habits.find(h=>h.id===x.parent),showGrp=!g&&(groups.length||par);
+  const fin=!g&&!S&&x.type!=="time"&&!isWeekly(x);
+  return '<div class="edit" style="--c:'+x.color+'"><input data-f="name" '+id+' value="'+esc(x.name)+'" maxlength="60" aria-label="Habit name"><textarea data-f="desc" '+id+' rows="2" maxlength="300" placeholder="Details (optional): what counts, chapters, targets…" aria-label="Details">'+esc(x.desc||"")+"</textarea>"
+  +'<div class="cols"><div><label class="note">Category'+(par?" (from group)":"")+"</label>"+catSel('data-f="cat" '+id+(par?" disabled":""),x.cat)+"</div><div>"+(showGrp?'<label class="note">Part of group</label><select data-f="parent" '+id+' aria-label="Part of group"><option value="">None</option>'+groups.map(h=>'<option value="'+h.id+'"'+(h.id===x.parent?" selected":"")+">"+esc(h.name)+"</option>").join("")+"</select>":"")+"</div></div>"
+  +(x.type==="num"?'<div class="cols"><div><label class="note">Unit</label><input data-f="unit" '+id+' value="'+esc(x.unit||"")+'" placeholder="e.g. minutes" aria-label="Unit"></div><div><label class="note">Daily goal'+(S?" (total)":"")+'</label><input data-f="target" '+id+' type="number" min="0" step="any" value="'+(x.target||"")+'" placeholder="optional" aria-label="Daily goal"></div></div>':x.type==="time"?'<label class="note">On or before (optional)</label><input data-f="target" '+id+' type="time" value="'+(x.target||"")+'">':"")
+  +(!g&&x.type!=="time"?slotsUI(x):"")
+  +(!g?'<div class="cols"><div>'+freqSel(x)+"</div><div>"+(fin?'<label class="note">Finish by</label>'+periodSel('data-f="by" '+id,x.by):"")+"</div></div>"+freqExtra(x):'<p class="note">'+kids(x).length+" sub-habits. Add more by choosing this group under “Part of group” in another habit.</p>")
+  +(!g&&x.type!=="time"?'<label class="note">Minutes per check-in or per unit (optional, counts toward Reports time)</label><input data-f="mpu" '+id+' type="number" min="0" step="any" value="'+(x.mpu||"")+'" placeholder="e.g. 40 for a TV episode">':"")
+  +cycUI(x)
+  +'<details data-sec="ic'+x.id+'"'+(openSec["ic"+x.id]?" open":"")+"><summary>Icon and colour</summary>"+iconPicker('data-hic="'+x.id+'" data-v',x.icon||"",true)+swatches('data-ec="'+x.id+'" data-c',x.color)+'</details><div class="bar"><span></span><span><button class="link" data-arch="'+x.id+'">'+(x.archived?"Restore":"Archive")+'</button> <button class="link" data-rm="'+x.id+'">'+(armed===x.id?"Tap again to delete all its data":"Delete")+"</button></span></div></div>"}
+function reorderView(){
+  const A=act(),grip=(n)=>'<button class="grip" aria-label="Move '+esc(n)+'">⠿</button>';
+  return '<p class="note">Drag the ⠿ handle to reorder, or focus it and use the up and down arrow keys. This order is used on every tab. Habits stay within their category; change a category in the habit’s edit panel.</p><div data-sortbox="cats">'+cats.map(c=>{
+    const T=A.filter(x=>!x.parent&&x.cat===c.id);
+    return '<div class="rcat" data-sid="'+c.id+'"><div class="rhead">'+grip(c.name)+ci(c)+esc(c.name)+"</div>"+(T.length?'<div data-sortbox="h:'+c.id+'">'+T.map(x=>'<div class="ritem" data-sid="'+x.id+'"><div class="rhead">'+grip(x.name)+ic(x)+esc(x.name)+"</div>"+(x.type==="group"&&kids(x).length?'<div class="rkids" data-sortbox="k:'+x.id+'">'+kids(x).map(k=>'<div class="ritem" data-sid="'+k.id+'"><div class="rhead">'+grip(k.name)+ic(k)+esc(k.name)+"</div></div>").join("")+"</div>":"")+"</div>").join("")+"</div>":"")+"</div>"}).join("")+"</div>"}
+function habitsView(){
+  let h='<div class="nav"><b style="text-align:left;font-size:1.15rem">Your habits</b><span class="row"><button class="nb" data-reorder>'+(reorder?"Done":"Reorder")+'</button>'+(reorder?"":'<button class="add" data-newtoggle>'+(showNew?"Cancel":"+ New habit")+"</button>")+"</span></div>";
+  if(reorder)return h+reorderView();
+  h+=showNew?newForm():"";
+  const A=act(),X=habits.filter(x=>x.archived&&!x.parent);
+  if(!habits.length)return h+'<p class="empty">No habits yet. Add one above, or start from a template in Settings.</p>';
+  const hrow=(x,kid)=>'<div class="hrow'+(kid?" kid":"")+'" style="--c:'+x.color+'"><div class="grow"><div class="name">'+ic(x)+esc(x.name)+'</div><div class="meta">'+[typeLabel(x),x.type==="group"?"":freqLabel(x),cycNote(x),x.by&&!hasSlots(x)&&periodOf(x.by)?"by "+periodOf(x.by).name.toLowerCase():"",x.mpu?x.mpu+" min each":""].filter(Boolean).join(" · ")+"</div></div>"+(nearEnd(x)?'<button class="link" data-extend="'+x.id+'">Add 66 days</button>':"")+'<button class="link" data-edit="'+x.id+'">'+(editing===x.id?"Close":"Edit")+"</button></div>"+(editing===x.id?editPanel(x):"");
+  const withKids=x=>hrow(x,false)+(x.type==="group"?habits.filter(k=>k.parent===x.id&&!!k.archived===!!x.archived).map(k=>hrow(k,true)).join(""):"");
+  const grp=(key,icon,name,color,L)=>'<button class="cat" data-hcc="'+key+'" aria-expanded="'+!settings.hcollapsed[key]+'"><i style="background:'+color+'"></i>'+icon+esc(name)+"<small>"+L.length+" "+(settings.hcollapsed[key]?"▸":"▾")+"</small></button>"+(settings.hcollapsed[key]?"":L.map(withKids).join(""));
+  const anyOpen=cats.some(c=>!settings.hcollapsed[c.id]);
+  h+='<p style="text-align:right;margin:0"><button class="link" data-hall="'+(anyOpen?"collapse":"expand")+'">'+(anyOpen?"Collapse all":"Expand all")+"</button></p>";
+  h+=cats.map(c=>{const L=A.filter(x=>!x.parent&&x.cat===c.id);return L.length?grp(c.id,ci(c),c.name,c.color,L):""}).join("");
+  return h+(X.length?grp("_arch","","Archived","var(--mute)",X):"")}

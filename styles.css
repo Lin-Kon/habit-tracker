@@ -195,3 +195,17 @@ details.rs details.rs{background:transparent;border:0;border-top:1px solid var(-
 details.rs summary{font-size:1.02rem}
 .wg{grid-template-columns:minmax(96px,1.7fr) repeat(7,minmax(0,1fr))}
 .wn,.wgrp{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.15;overflow:hidden}
+.tbtn{flex:none;width:38px;height:38px;min-width:38px;min-height:38px;border-radius:50%;border:2px solid var(--c);background:transparent;display:flex;align-items:center;justify-content:center;font-size:.9rem;padding:0;-webkit-appearance:none;appearance:none}
+.tbtn.on{background:var(--c);color:#fff}
+.runbar{display:flex;align-items:center;gap:10px;background:color-mix(in srgb,var(--moss) 14%,var(--card));border:1px solid var(--moss);border-radius:12px;padding:8px 12px;margin-bottom:12px}
+.runbar #runel{font-variant-numeric:tabular-nums;font-weight:700}
+.runbar .nb{margin-left:auto}
+.numin .tval{width:84px;text-align:center;font-weight:600;font-size:1.1rem;padding:9px 4px;border:1px solid var(--c);border-radius:10px;background:var(--card)}
+.numin.ok .tval{background:var(--c);color:#fff}
+.tlog{display:grid;gap:6px}
+.erow{display:grid;grid-template-columns:124px 84px auto 1fr;gap:6px;align-items:center}
+.erow.add{grid-template-columns:124px 1fr auto}
+.erow.merged{display:flex;justify-content:space-between}
+.erow .link{justify-self:end}
+.chkrow{display:flex;gap:8px;align-items:center;font-weight:600}
+.chkrow input{width:auto}

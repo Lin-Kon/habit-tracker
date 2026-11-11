@@ -4,6 +4,7 @@ let toastT;
 function toast(text,undo){let el=document.getElementById("toast");if(!el){el=document.createElement("div");el.id="toast";el.setAttribute("role","status");document.body.appendChild(el)}
   el.innerHTML="<span>"+esc(text)+"</span>"+(undo?"<button data-undo>Undo</button>":"");el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{el.hidden=true},undo?10000:5000)}
 const msg=t=>toast(t);
+const savedMsg=r=>"Saved "+hmFmt(r.secs/60)+" to "+r.h.name+"."+(r.secs>28800?" That is a long entry. If you forgot to pause, fix it in More, Time log.":"");
 const formErr=m=>{const e=document.getElementById("ferr");if(e){e.textContent=m;e.hidden=!m}if(m){const n=document.getElementById("n");if(n)n.focus()}};
 const catErr=m=>{const e=document.getElementById("cerr");if(e){e.textContent=m;e.hidden=!m}};
 document.addEventListener("toggle",e=>{const s=e.target.dataset&&e.target.dataset.sec;if(s)openSec[s]=e.target.open},true);
@@ -93,6 +94,16 @@ document.addEventListener("click",e=>{
   if(D.cdel){if(cats.length<2){toast("Keep at least one category.");return}
     if(armed!=="c"+D.cdel){armed="c"+D.cdel;render();return}
     const keep=cats.find(c=>c.id!==D.cdel).id;habits.forEach(h=>{if(h.cat===D.cdel)h.cat=keep});cats=cats.filter(c=>c.id!==D.cdel);armed=null;save();render();return}
+  if(D.ttoggle){const h=habits.find(x=>x.id===D.ttoggle);if(!h)return;
+    if(settings.run&&settings.run.id===h.id){const r=runStop();save();render();if(r)toast(savedMsg(r))}
+    else{let pre="";if(settings.run){const r=runStop();if(r)pre="Paused "+r.h.name+" ("+hmFmt(r.secs/60)+"). "}runStart(h);save();render();toast(pre+"Timer started for "+h.name+".")}
+    return}
+  if(b.hasAttribute("data-tstop")){const r=runStop();if(r){save();render();toast(savedMsg(r))}return}
+  if(D.eadd){const h=habits.find(x=>x.id===D.eadd);if(!h)return;
+    const t=document.querySelector('[data-eat="'+h.id+'"]').value,m=parseFloat(document.querySelector('[data-eam="'+h.id+'"]').value);
+    if(!(m>=1&&m<=1440)){toast("Enter the minutes spent, from 1 to 1440.");return}
+    addEntry(h,D.d,{t:t||"",d:Math.round(m*60),man:1});compactEntries();save();render();return}
+  if(D.edel!==undefined){const h=habits.find(x=>x.id===D.id);if(h&&h.ent&&h.ent[D.d]){h.ent[D.d].splice(+D.edel,1);if(!h.ent[D.d].length)delete h.ent[D.d];save();render()}return}
   if(D.tpl){applyTpl(D.tpl);return}
   if(b.hasAttribute("data-notify")){
     if(typeof Notification==="undefined"){toast("Notifications are not available in this browser. Behind-schedule alerts still show on the Log tab.");return}
@@ -118,6 +129,7 @@ const startOk=v=>v>=addDays(TODAY(),-7)&&v<=addDays(TODAY(),7);
 document.addEventListener("change",e=>{
   const i=e.target;
   if(i.id==="t"){document.getElementById("numopts").hidden=i.value!=="num";document.getElementById("timeopts").hidden=i.value!=="time";document.getElementById("sdwrap").hidden=i.value==="group";return}
+  if(i.id==="kd"){const before=settings.keepDays||30;settings.keepDays=+i.value;compactEntries();save();render();toast(+i.value<before?"Timer entries older than "+i.value+" days were merged into daily totals.":"Detailed timer entries are now kept for "+i.value+" days.");return}
   if(i.id==="ws"){settings.weekStart=+i.value;save();render();return}
   if(i.id==="wk"){settings.weekend=i.value.split(",").map(Number);save();render();return}
   if(i.id==="ro"){settings.rollover=+i.value;save();render();return}
@@ -131,6 +143,10 @@ document.addEventListener("change",e=>{
     if(i.dataset.cf==="name"){const v=i.value.trim();if(!v){i.value=c.name;toast("A category needs a name.");return}const dup=catNameTaken(v,c.id);if(dup){i.value=c.name;toast("A category named “"+dup.name+"” already exists. Category names must be different.");return}c.name=v}
     else c.color=i.value;save();return}
   const h=habits.find(x=>x.id===i.dataset.id);if(!h)return;
+  if(i.dataset.ef!==undefined){const es=(h.ent&&h.ent[i.dataset.d])||[],e=es[+i.dataset.ei];if(!e)return;
+    if(i.dataset.ef==="t"){e.t=i.value||""}
+    else{const m=parseFloat(i.value);if(!(m>=0.5&&m<=1440)){i.value=r1(e.d/60);toast("Minutes must be between 0.5 and 1440.");return}e.d=Math.round(m*60)}
+    es.sort((p,q)=>(p.t||"").localeCompare(q.t||""));save();render();return}
   if(i.dataset.slby!==undefined){const s=(h.slots||[]).find(x=>x.id===i.dataset.slby);if(s){s.by=i.value;save()}return}
   if(i.dataset.f){const f=i.dataset.f,v=i.value.trim();
     if(f==="name"){if(!v){i.value=h.name;toast("A habit needs a name.");return}const dup=habitNameTaken(v,h.id);if(dup){i.value=h.name;toast(nameMsg(v,dup));return}h.name=v}
@@ -142,7 +158,8 @@ document.addEventListener("change",e=>{
     else if(f==="fn"){const n=Math.min(7,Math.max(1,parseInt(v)||1));h.freq={t:"weekly",n};i.value=n}
     else if(f==="by"){if(v)h.by=v;else delete h.by}
     else if(f==="need"){const n=Math.min((h.slots||[]).length||1,Math.max(1,parseInt(v)||1));h.need=n;i.value=n}
-    else if(f==="slots"){const names=v.split(",").map(s=>s.trim()).filter(Boolean),err=slotNamesError(names);if(err){i.value=(h.slots||[]).map(s=>s.name).join(", ");toast(err);return}setSlots(h,names);save();render();return}
+    else if(f==="slots"){const names=v.split(",").map(s=>s.trim()).filter(Boolean),err=slotNamesError(names);if(err){i.value=(h.slots||[]).map(s=>s.name).join(", ");toast(err);return}if(names.length>=2&&h.timer){if(settings.run&&settings.run.id===h.id)runStop();delete h.timer;toast("Timer turned off: it is not available with several times a day.")}setSlots(h,names);save();render();return}
+    else if(f==="timer"){if(i.checked)h.timer=true;else{if(settings.run&&settings.run.id===h.id)runStop();delete h.timer}save();render();return}
     else if(f==="mpu"){const g=parseFloat(v);if(g>0)h.mpu=g;else delete h.mpu}
     else if(f==="target"){if(h.type==="time"){if(v)h.target=v;else delete h.target}else{const g=parseFloat(v);if(g>0)h.target=g;else delete h.target}}
     save();return}
@@ -168,6 +185,7 @@ document.addEventListener("submit",e=>{
   const el=document.querySelector(".edit");if(el)el.scrollIntoView({block:"center"});
   toast("Added. Set how often, several sessions a day, a finish-by time and more below.")});
 setInterval(()=>{notifyBehind();const el=document.getElementById("behindbar");if(el&&view==="day"&&sel===TODAY())el.innerHTML=behindHtml()},60000);
+setInterval(()=>{const el=document.getElementById("runel");if(el&&settings.run)el.textContent=fmtClock((Date.now()-settings.run.at)/1000)},1000);
 checkBadges(true);
 notifyBehind();
 render();

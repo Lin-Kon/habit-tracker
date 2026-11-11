@@ -50,7 +50,7 @@ function repView(){
   else{const Dd=L.filter(x=>!isWeekly(x));
     if(S.g)sum+=card(streak(S.g),"Group streak (days)")+card(longest(S.g),"Longest group streak (days)");
     sum+=card(Dd.length?Math.max(...Dd.map(streak)):"–","Best current streak (days)")+card(Dd.length?Math.max(...Dd.map(longest)):"–","Longest streak ever (days)")}
-  sum+="</div>"+timeSection(per,one,S)+"<h2>Weekly completion, last 12 weeks</h2>"+weekBars(L,one&&one.color)+'<p class="legend">Share of due habit-days completed in each week. Labels are the first day of each week.</p><h2>By day of the week</h2>'+dowBars(L,from,t)+'<p class="legend">Share of due days completed on each weekday over the selected range.</p>';
+  sum+="</div>"+timeSection(per,one,S)+whenSection(per)+"<h2>Weekly completion, last 12 weeks</h2>"+weekBars(L,one&&one.color)+'<p class="legend">Share of due habit-days completed in each week. Labels are the first day of each week.</p><h2>By day of the week</h2>'+dowBars(L,from,t)+'<p class="legend">Share of due days completed on each weekday over the selected range.</p>';
   let det="";
   if(!one){
     if(!S.c&&!S.g){const rows=cats.map(c=>{const ps=per.filter(p=>p.h.cat===c.id);if(!ps.length)return"";return mrow(ci(c)+esc(c.name),c.color,{dn:ps.reduce((a,p)=>a+p.dn,0),el:ps.reduce((a,p)=>a+p.el,0)}," · "+ps.length+(ps.length===1?" habit":" habits"),"c:"+c.id)}).filter(Boolean);det+=rsec("rc","By category",rows.join(""),false,rows.length)}
@@ -59,3 +59,11 @@ function repView(){
     det+=rsec("rh","By habit",per.map(p=>mrow(ic(p.h)+esc(p.h.name)+grpTag(p.h),p.h.color,p,habitExtra(p.h,p),p.h.id)).join(""),false,per.length)}
   else{const ks=Object.keys(one.notes).sort().reverse().slice(0,8);det+=rsec("rn","Recent notes",ks.length?'<ul class="nl">'+ks.map(d=>"<li><b>"+fmt(d,{day:"numeric",month:"short"})+"</b> "+esc(one.notes[d])+"</li>").join("")+"</ul>":'<p class="empty">No notes yet.</p>',ks.length>0,ks.length)}
   return h+rsec("rs","Summary",sum,true)+rsec("rd","Details",det,true)}
+function periodIdx(t){const P=settings.periods;for(let i=P.length-1;i>=0;i--)if(hm2m(t)>=hm2m(P[i].from))return i;return 0}
+/* Timed minutes by the time of day each timer entry started. Only shows when timer entries exist, so most people never see it. */
+function whenSection(per){
+  const P=settings.periods,tot=P.map(()=>0);let un=0,all=0,n=0;
+  per.forEach(p=>{const E=p.h.ent;if(!E||!p.h.timer)return;p.days.forEach(d=>(E[d]||[]).forEach(e=>{const m=e.d/60;all+=m;n++;if(e.t)tot[periodIdx(e.t)]+=m;else un+=m}))});
+  if(!all)return"";
+  const placed=tot.reduce((a,b)=>a+b,0),rows=P.map((p,i)=>({name:esc(p.name)+' <span class="meta">'+p.from+"–"+p.to+"</span>",m:tot[i],color:PAL[i%PAL.length]})).filter(x=>x.m>0);
+  return "<h2>When you spend timed minutes</h2>"+(placed?'<div class="stack">'+rows.map(x=>'<i style="flex:'+x.m+";background:"+x.color+'"></i>').join("")+"</div>"+rows.map(x=>'<div class="dl tl"><span><i class="dot" style="background:'+x.color+'"></i>'+x.name+"</span><b>"+hmFmt(x.m)+" · "+pct(x.m,placed)+"%</b></div>").join(""):"")+'<p class="legend">From '+n+" timer "+(n===1?"entry":"entries")+": "+hmFmt(all)+" in total"+(un?", of which "+hmFmt(un)+" has no start time (added without one, or older than the "+keepDays()+"-day detail window)":"")+". Each entry is placed by the time it started. Detailed entries are kept for "+keepDays()+" days; older ones are merged into daily totals.</p>"}

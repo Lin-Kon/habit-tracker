@@ -70,7 +70,10 @@ function norm(){
   cats.forEach(c=>{if(c.icon===undefined)c.icon=CAT_ICON[c.name]||"📁"});
   habits.forEach((h,i)=>{h.type=h.type||"yes";h.done=h.done||{};h.notes=h.notes||{};h.color=h.color||PAL[i%PAL.length];h.created=h.created||TODAY();
     if(!h.cycles)h.cycles=Math.max(1,Math.ceil((dayDiff(h.created,TODAY())+1)/WINDOW));
-    if(!cats.some(c=>c.id===h.cat))h.cat=cats[cats.length-1].id})}
+    if(!cats.some(c=>c.id===h.cat))h.cat=cats[cats.length-1].id});
+  if(typeof settings.keepDays!=="number")settings.keepDays=30;
+  if(settings.run&&!habits.some(h=>h.id===settings.run.id))settings.run=null;
+  compactEntries()}
 norm();
 const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify({v:6,settings,cats,habits}))}catch(e){}};
 const save=()=>{persist();if(typeof checkBadges==="function")checkBadges(badgeQuiet)};
@@ -92,7 +95,7 @@ const vis=(h,d)=>h.type==="group"?kids(h).some(k=>vis(k,d)):!h.archived&&inWin(h
 const hasSlots=h=>(h.type==="yes"||h.type==="num")&&Array.isArray(h.slots)&&h.slots.length>1;
 const skipped=(h,d)=>!!(h.skip&&h.skip[d]);
 /* Value for a day: raw value, or for session habits the number of sessions done (yes) or the total (num). */
-function dayVal(h,d){const v=h.done[d];if(!hasSlots(h))return v;if(!v||typeof v!=="object")return 0;let t=0;h.slots.forEach(s=>{const x=v[s.id];if(x)t+=h.type==="num"?x:1});return t}
+function dayVal(h,d){if(tmValue(h)&&h.ent&&h.ent[d]&&h.ent[d].length)return r2(entMins(h,d)/unitMins(h));const v=h.done[d];if(!hasSlots(h))return v;if(!v||typeof v!=="object")return 0;let t=0;h.slots.forEach(s=>{const x=v[s.id];if(x)t+=h.type==="num"?x:1});return t}
 function setVal(h,d,slot,v){
   if(slot){let o=h.done[d];if(!o||typeof o!=="object")o={};if(v)o[slot]=v;else delete o[slot];if(Object.keys(o).length)h.done[d]=o;else delete h.done[d]}
   else{if(v)h.done[d]=v;else delete h.done[d]}
@@ -132,10 +135,10 @@ function isDone(h,d){
 const logged=(h,d)=>h.type==="group"?isDone(h,d):h.type==="time"?!!h.done[d]:dayVal(h,d)>0;
 function doneKeys(h){
   if(h.type==="group"){const e=cycleEnd(h),t=TODAY();return span(winStart(h),e<t?e:t).filter(d=>isDone(h,d))}
-  return Object.keys(h.done).filter(d=>inWin(h,d)&&isDone(h,d))}
+  return [...new Set(Object.keys(h.done).concat(Object.keys(h.ent||{})))].filter(d=>inWin(h,d)&&isDone(h,d))}
 const totalDone=h=>doneKeys(h).length;
 const weekDone=(h,d)=>weekOf(d).filter(x=>isDone(h,x)).length;
-const earliest=h=>Object.keys(h.done).concat(winStart(h)).sort()[0];
+const earliest=h=>Object.keys(h.done).concat(Object.keys(h.ent||{})).concat(winStart(h)).sort()[0];
 function nextDue(h,d){for(let i=1;i<=7;i++){const x=addDays(d,i);if(isDue(h,x))return x}return null}
 /* Streak: consecutive scheduled days done (unscheduled and skipped days are skipped over); for days-per-week habits, consecutive weeks meeting the goal. */
 function streak(h){
@@ -167,8 +170,8 @@ function timeStats(h,days){const v=days.filter(d=>h.done[d]).map(d=>tmin(h.done[
 /* Time spent. A number habit counts if its unit is minutes or hours, or if "minutes per unit" (mpu) is set (e.g. 40 per TV episode).
    A yes/no habit counts mpu minutes per completed check-in. Time-of-day habits and groups are never counted. */
 const unitMins=h=>{const u=(h.unit||"").toLowerCase();return /^min/.test(u)?1:/^(h$|hr|hour)/.test(u)?60:0};
-const isTimed=h=>h.type==="yes"?h.mpu>0:h.type==="num"?(unitMins(h)>0||h.mpu>0):false;
-const minsOf=(h,d)=>{if(h.type==="group"||h.type==="time"||!inWin(h,d))return 0;const v=dayVal(h,d)||0;if(h.type==="yes")return h.mpu>0?v*h.mpu:0;const u=unitMins(h);return u?v*u:(h.mpu>0?v*h.mpu:0)};
+const isTimed=h=>h.timer?true:h.type==="yes"?h.mpu>0:h.type==="num"?(unitMins(h)>0||h.mpu>0):false;
+const minsOf=(h,d)=>{if(h.type==="group"||h.type==="time"||!inWin(h,d))return 0;if(h.timer){const E=entMins(h,d);if(E>0)return E}const v=dayVal(h,d)||0;if(h.type==="yes")return h.mpu>0?v*h.mpu:0;const u=unitMins(h);return u?v*u:(h.mpu>0?v*h.mpu:0)};
 /* ---- time-of-day deadlines ("finish by the end of the morning") */
 function behindList(){
   const t=TODAY(),now=nowMin(),out=[];
@@ -181,7 +184,7 @@ function behindList(){
 function monthShift(ym,k){const[y,m]=ym.split("-").map(Number);return ds(new Date(y,m-1+k,1)).slice(0,7)}
 function bounds(){
   const t=TODAY();let first=t;
-  habits.forEach(h=>{[h.created].concat(Object.keys(h.done)).forEach(x=>{if(x<first)first=x})});
+  habits.forEach(h=>{[h.created].concat(Object.keys(h.done)).concat(Object.keys(h.ent||{})).forEach(x=>{if(x<first)first=x})});
   const min=monthShift(first.slice(0,7),-1)+"-01",max=addDays(monthShift(t.slice(0,7),4)+"-01",-1);
   return{min,max,minYM:min.slice(0,7),maxYM:max.slice(0,7)}}
 /* Put a subset of habits (by id) in a new relative order, leaving all other habits where they are. */
@@ -189,3 +192,31 @@ function reorderSubset(ids){
   const pos=[];habits.forEach((h,i)=>{if(ids.includes(h.id))pos.push(i)});
   const ord=ids.map(id=>habits.find(h=>h.id===id)).filter(Boolean);
   pos.forEach((p,k)=>{habits[p]=ord[k]})}
+/* ---- optional timer: start, pause, resume and manual entries.
+   h.timer = true turns it on. h.ent[date] = [{t:"HH:MM" start (or ""), d:seconds, man:1 if typed, c:1 if merged}].
+   Minutes-based number habits take their day value from the entries; other habits only gain time information.
+   Entries with start times are kept for settings.keepDays (default 30); older ones are merged into one daily total. settings.run = {id, at} while a timer runs. */
+function pad2(n){return String(n).padStart(2,"0")}
+function r2(n){return Math.round(n*100)/100}
+function entMins(h,d){return ((h.ent&&h.ent[d])||[]).reduce((a,e)=>a+e.d,0)/60}
+function tmValue(h){return !!h.timer&&h.type==="num"&&!hasSlots(h)&&unitMins(h)>0}
+function keepDays(){return settings.keepDays||30}
+function fmtClock(s){s=Math.max(0,Math.floor(s));return Math.floor(s/3600)+":"+pad2(Math.floor(s%3600/60))+":"+pad2(s%60)}
+function compactEntries(){
+  const lim=addDays(TODAY(),-keepDays());
+  habits.forEach(h=>{if(!h.ent)return;Object.keys(h.ent).forEach(d=>{const es=h.ent[d];
+    if(!es||!es.length){delete h.ent[d];return}
+    if(d<lim&&!(es.length===1&&es[0].c))h.ent[d]=[{t:"",d:es.reduce((a,e)=>a+e.d,0),c:1}]})})}
+function addEntry(h,d,e){
+  h.ent=h.ent||{};const cur=h.ent[d]||(h.ent[d]=[]);
+  if(!cur.length&&tmValue(h)&&h.done[d]>0){cur.push({t:"",d:Math.round(h.done[d]*unitMins(h)*60),man:1});delete h.done[d]}
+  cur.push(e);cur.sort((a,b)=>(a.t||"").localeCompare(b.t||""));
+  if(h.type==="yes"&&!h.done[d]&&e.d>=60)h.done[d]=1;
+  if(h.skip)delete h.skip[d]}
+function runStart(h){settings.run={id:h.id,at:Date.now()}}
+function runH(){return settings.run?habits.find(h=>h.id===settings.run.id):null}
+function runStop(){
+  const r=settings.run;if(!r)return null;settings.run=null;
+  const h=habits.find(x=>x.id===r.id);if(!h)return null;
+  const secs=Math.max(1,Math.round((Date.now()-r.at)/1000)),s=new Date(r.at);
+  addEntry(h,ds(s),{t:pad2(s.getHours())+":"+pad2(s.getMinutes()),d:secs});compactEntries();return{h,secs}}

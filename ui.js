@@ -15,6 +15,7 @@ if(typeof window!=="undefined")window.addEventListener("popstate",e=>{const i=e.
 function render(){
   const A=act(),n=A.filter(h=>isDone(h,sel)).length;
   navList[navIdx]=navSnap();
+  document.getElementById("runbar").innerHTML=runHtml();
   const subs={day:A.length?n+" of "+A.length+" done":"No habits yet",cal:"Weekly detail, monthly overview",rep:"Totals, trends and time spent",badge:"Level and achievements",hab:"Add, edit and archive",set:"Templates, categories and backup"};
   document.getElementById("sub").textContent=subs[view];
   document.getElementById("back").disabled=navIdx<=0;

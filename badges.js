@@ -1,7 +1,7 @@
 /* badges.js: gamification. Badges are computed from your data; the date each was first earned is kept in settings.badges. */
 function metrics(){
   const A=act(),t=TODAY(),m={cycles:0,total:0,best:0,bestW:0,mins:0,notes:0,perfectRun:0,perfectDays:0,maxCats:0,timeRun:0,rate:0,habits:habits.length,cats:new Set(habits.map(h=>h.cat)).size};
-  habits.filter(h=>h.type!=="group").forEach(h=>{m.total+=totalDone(h);const L=longest(h);if(isWeekly(h))m.bestW=Math.max(m.bestW,L);else m.best=Math.max(m.best,L);if(h.type==="time")m.timeRun=Math.max(m.timeRun,L);m.notes+=Object.keys(h.notes).length;m.mins+=Object.keys(h.done).reduce((a,d)=>a+minsOf(h,d),0)});
+  habits.filter(h=>h.type!=="group").forEach(h=>{m.total+=totalDone(h);const L=longest(h);if(isWeekly(h))m.bestW=Math.max(m.bestW,L);else m.best=Math.max(m.best,L);if(h.type==="time")m.timeRun=Math.max(m.timeRun,L);m.notes+=Object.keys(h.notes).length;m.mins+=[...new Set(Object.keys(h.done).concat(Object.keys(h.ent||{})))].reduce((a,d)=>a+minsOf(h,d),0)});
   habits.forEach(h=>{if(h.type!=="group"&&t>cycleEnd(h)){const s=stats(h,winStart(h),cycleEnd(h));if(pct(s.dn,s.el)>=60)m.cycles++}});
   if(A.length){
     let run=0;

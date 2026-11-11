@@ -12,13 +12,16 @@ function makeSample(){
     {name:"Dinner",cat:"health",type:"time",target:"21:00",desc:"Log the time you ate. Use Skip this day when you fast or diet.",skipP:.12,start:120,mean:1245,sd:40,gain:10},
     {name:"Morning run",cat:"health",type:"num",unit:"minutes",target:30,freq:{t:"weekly",n:4},start:180,base:.45,gain:.15,we:.1,lo:20,hi:55},
     {name:"Drink water",cat:"health",type:"num",unit:"glasses",target:8,slots:["Morning","Afternoon","Night"],start:180,base:.85,gain:.05,we:-.05,lo:2,hi:4},
-    {name:"Read",cat:"study",type:"num",unit:"pages",mpu:2,target:20,start:170,base:.6,gain:.2,we:.2,lo:8,hi:40},
-    {name:"Deep work",cat:"work",type:"num",unit:"minutes",target:90,freq:{t:"weekdays"},start:150,base:.7,gain:.15,we:0,lo:40,hi:150},
-    {name:"Meditate",cat:"self",type:"yes",mpu:10,start:60,base:.45,gain:.4,we:.1},
+    {name:"Read",cat:"study",type:"num",unit:"pages",mpu:2,target:20,timer:true,hrs:[13,14,20,21,22],start:170,base:.6,gain:.2,we:.2,lo:8,hi:40},
+    {name:"Deep work",cat:"work",type:"num",unit:"minutes",target:90,timer:true,hrs:[9,10,11,14,15,16,20],freq:{t:"weekdays"},start:150,base:.7,gain:.15,we:0,lo:40,hi:150},
+    {name:"Meditate",cat:"self",type:"yes",mpu:10,timer:true,hrs:[6,7],start:60,base:.45,gain:.4,we:.1},
     {name:"Journal",cat:"self",type:"yes",mpu:10,freq:{t:"days",days:[0,2,4]},start:100,base:.6,gain:.3,we:0},
     {name:"TV episodes",cat:"fun",type:"num",unit:"episodes",mpu:40,start:160,base:.6,gain:0,we:.25,lo:1,hi:5},
     {name:"Movies watched",cat:"fun",type:"num",unit:"movies",mpu:110,freq:{t:"weekends"},start:160,base:.35,gain:0,we:0,lo:1,hi:1}];
   const idOf={};defs.forEach((d,i)=>{idOf[d.name]="s"+i});
+  const mkEnt=(total,hrs)=>{const n=total>45&&rnd()<.6?(total>90&&rnd()<.5?3:2):1;let left=total;const out=[];
+    for(let i=0;i<n;i++){const m=i===n-1?left:Math.max(5,Math.round(left*(.3+rnd()*.3)));left=Math.max(5,left-m);const hh=hrs[Math.floor(rnd()*hrs.length)];out.push({t:pad2(hh)+":"+pad2(Math.floor(rnd()*4)*15),d:Math.max(60,Math.round(m*60))})}
+    return out.sort((a,b)=>a.t.localeCompare(b.t))};
   return defs.map((d,i)=>{
     const h={id:"s"+i,name:d.name,cat:d.cat,type:d.type,color:PAL[i%PAL.length],created:addDays(t,-d.start),cycles:Math.max(1,Math.ceil((d.start+1)/WINDOW)),done:{},notes:{}};
     const ic=d.type==="group"?"🎓":guessIcon(d.name);if(ic)h.icon=ic;
@@ -36,4 +39,9 @@ function makeSample(){
       else if(rnd()<p)h.done[date]=d.type==="num"?Math.round(d.lo+rnd()*(d.hi-d.lo)):1;
       else if(d.type==="num"&&d.target&&rnd()<.3)h.done[date]=Math.max(1,Math.round(d.target*(.2+rnd()*.5)));
       if(h.done[date]&&rnd()<.07)h.notes[date]=notes[Math.floor(rnd()*notes.length)]}
+    if(d.timer){h.timer=true;h.ent={};Object.keys(h.done).forEach(date=>{const v=h.done[date];let mins;
+      if(tmValue(h)){mins=Math.round(v*unitMins(h));delete h.done[date]}
+      else if(h.type==="yes")mins=10+Math.floor(rnd()*11);
+      else mins=Math.max(10,Math.round(v*1.8));
+      h.ent[date]=mkEnt(mins,d.hrs)})}
     return h})}

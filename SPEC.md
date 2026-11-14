@@ -6,11 +6,55 @@
 
 This is a plain-text copy of the specification, kept in the repo for reference. The formatted version (with colour-coded boxes for New, Changed, Fixed and Planned items) is the linked doc at the top of the project README — open that one if you want the colour. Small one-row tables below (`| NEW: ... |`) mark the same callouts here in plain Markdown; everything else renders the same.
 
+
+## Goals and Objectives
+- Hierarchy: Goal > Objective > Habit. Linking a habit to an objective is optional.
+- Goal fields: name, description, target date (optional), category (optional), status (active/paused/done).
+- Objective fields: name, measure type (auto from linked habits / numeric target / manual checkbox), target value, due date (optional).
+- Habit edit form: add optional "Supports objective" selector.
+- Progress: objective % computed from linked habits' time/sessions/streaks; goal % = average of its objectives.
+- Goals tab: list of goals with progress rings; tapping opens objectives and linked habits.
+- Home screen shows only a small "current goal" chip.
+- Optional goal templates per life phase (student, job seeker).
+
+## Dual Timers
+- Two slots: Primary (one running task) and Background (one running task).
+- Starting a new primary pauses/stops the previous primary; same rule for background.
+- Habit flag: "Can run in background" (default off). Only flagged habits appear in the background picker.
+- Each timer entry stores: habit, start, end, slot, source (live/manual).
+- Manual entries (forgotten starts) can be added to either slot.
+
+## Overlap Insights (Reports)
+- Overlap = intersection of primary and background entry time ranges.
+- Pair matrix: minutes of each background habit per primary habit, and the reverse.
+- Per habit: % of its time with a background task.
+- Top 3 combinations card for the selected period.
+
+## Pomodoro
+- Mode on the primary timer. Defaults: focus 25, short break 5, long break 15 after 4 rounds (configurable).
+- Focus rounds log time to the habit; breaks are not logged.
+- Setting: background timer continues or pauses during breaks.
+
+## Home Screen (redesign)
+- Contents: current task name, large primary timer, background timer strip, start/pause button, pomodoro toggle, recent-habit quick-start chips, current goal chip.
+- Bottom navigation: Home, Habits, Goals, Log, Reports.
+- All detail (entries, edits, history) lives on the Log screen, not Home.
+
+## Habits Screen Views and Sorting
+- Views: Cards, List, Compact grid. Last choice is remembered.
+- Sort: A-Z, time of day, most time spent, streak, category, manual order (drag to reorder).
+
+## Log Screen
+- Day timeline with Primary and Background rows shown in parallel.
+- Filters: habit, category, slot, date range. Tap an entry to edit; add manual entries.
+
+
+
 | New | Changed | Fixed | Planned |
 | --- | --- | --- | --- |
 | A feature added in this version | Behaviour that now works differently | A problem that has been corrected | Not available yet, planned for a later version |
 
-## What's new in this version
+## previous additions
 
 | Type | What changed | Where |
 | --- | --- | --- |

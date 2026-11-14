@@ -28,7 +28,7 @@ const nowMin=()=>{const n=new Date();return n.getHours()*60+n.getMinutes()};
    So a 01:30 bedtime logged on Monday is later than 23:00 on Monday; Tuesday's 22:00 is logged on Tuesday. */
 const tmin=v=>{const[a,b]=v.split(":").map(Number),m=a*60+b;return m<settings.rollover*60?m+1440:m};
 const tstr=m=>{m=Math.round(m)%1440;return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0")};
-let habits=[],cats=[],settings={weekStart:6,weekend:[5,6],rollover:4,notify:false,hideDone:false,collapsed:{},hcollapsed:{},badges:{},periods:null},armed=null,view="day",rng=30,sel=TODAY(),repScope="all",snap=null;
+let habits=[],cats=[],settings={weekStart:6,weekend:[5,6],rollover:4,notify:false,hideDone:false,collapsed:{},hcollapsed:{},badges:{},periods:null,profile:null,plan:{},reflections:{},rough:{},rest:{},coachOn:true,promptSeen:false},armed=null,view="day",rng=30,sel=TODAY(),repScope="all",snap=null;
 let calMode="week",calScope="all",calDate=TODAY(),calPick=null,editing=null,showNew=false,showOff=false,reorder=false,noteOpen={},openSec={},iconEdit=null,badgeQuiet=false;
 try{const p=JSON.parse(localStorage.getItem(KEY));habits=Array.isArray(p)?p:(p&&p.habits)||[];if(p&&p.settings)Object.assign(settings,p.settings);if(p&&Array.isArray(p.cats))cats=p.cats}catch(e){habits=[]}
 if(!settings.v5){settings.weekStart=6;settings.v5=1}
@@ -62,7 +62,7 @@ function periodNameError(i,v){
 const daysLeft=h=>dayDiff(TODAY(),cycleEnd(h));
 const nearEnd=h=>h.type!=="group"&&!h.archived&&h.created<=TODAY()&&daysLeft(h)<=14;
 function norm(){
-  ["collapsed","hcollapsed","badges"].forEach(k=>settings[k]=settings[k]||{});
+  ["collapsed","hcollapsed","badges","plan","reflections","rough","rest"].forEach(k=>settings[k]=settings[k]||{});
   if(!Array.isArray(settings.weekend))settings.weekend=[5,6];
   fixPeriods();
   if(typeof settings.rollover!=="number")settings.rollover=4;
@@ -129,7 +129,7 @@ const freqLabel=h=>{const f=freq(h);return f.t==="weekdays"?"Weekdays":f.t==="we
 function isDone(h,d){
   if(h.type==="group"){const L=kids(h).filter(c=>!isWeekly(c)&&isDue(c,d));return L.length>0&&L.every(c=>isDone(c,d))}
   const v=dayVal(h,d);
-  if(h.type==="num")return v>0&&(!h.target||v>=h.target);
+  if(h.type==="num")return v>0&&(!h.target||v>=(h.tiny>0&&h.tiny<h.target?h.tiny:h.target));
   if(h.type==="time")return !!v&&(!h.target||tmin(v)<=tmin(h.target));
   return hasSlots(h)?v>=(h.need||h.slots.length):!!v}
 const logged=(h,d)=>h.type==="group"?isDone(h,d):h.type==="time"?!!h.done[d]:dayVal(h,d)>0;
@@ -220,3 +220,9 @@ function runStop(){
   const h=habits.find(x=>x.id===r.id);if(!h)return null;
   const secs=Math.max(1,Math.round((Date.now()-r.at)/1000)),s=new Date(r.at);
   addEntry(h,ds(s),{t:pad2(s.getHours())+":"+pad2(s.getMinutes()),d:secs});compactEntries();return{h,secs}}
+/* ---- small steps: a number habit can have a small step (h.tiny). Reaching it counts as done and keeps the streak; reaching the full goal is tracked separately. */
+function isFull(h,d){if(h.type!=="num"||!(h.tiny>0))return isDone(h,d);const v=dayVal(h,d);return v>0&&(!h.target||v>=h.target)}
+function isSmall(h,d){return h.type==="num"&&h.tiny>0&&isDone(h,d)&&!isFull(h,d)}
+/* ---- rest day: leave every scheduled habit out of today's totals (streaks are protected) */
+function restDay(){const t=TODAY(),ids=[];act().forEach(h=>{if(h.type==="group"||isWeekly(h)||!vis(h,t)||!isDue(h,t)||isDone(h,t))return;h.skip=h.skip||{};h.skip[t]=1;ids.push(h.id)});settings.rest[t]=ids;return ids.length}
+function undoRest(){const t=TODAY();(settings.rest[t]||[]).forEach(id=>{const h=habits.find(x=>x.id===id);if(h&&h.skip)delete h.skip[t]});delete settings.rest[t]}

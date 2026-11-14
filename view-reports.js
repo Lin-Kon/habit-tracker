@@ -50,6 +50,7 @@ function repView(){
   else{const Dd=L.filter(x=>!isWeekly(x));
     if(S.g)sum+=card(streak(S.g),"Group streak (days)")+card(longest(S.g),"Longest group streak (days)");
     sum+=card(Dd.length?Math.max(...Dd.map(streak)):"–","Best current streak (days)")+card(Dd.length?Math.max(...Dd.map(longest)):"–","Longest streak ever (days)")}
+  const smN=per.reduce((a,p)=>a+p.days.filter(d=>isSmall(p.h,d)).length,0);if(smN)sum+=card(smN,"Small steps counted");
   sum+="</div>"+timeSection(per,one,S)+whenSection(per)+"<h2>Weekly completion, last 12 weeks</h2>"+weekBars(L,one&&one.color)+'<p class="legend">Share of due habit-days completed in each week. Labels are the first day of each week.</p><h2>By day of the week</h2>'+dowBars(L,from,t)+'<p class="legend">Share of due days completed on each weekday over the selected range.</p>';
   let det="";
   if(!one){

@@ -8,6 +8,8 @@ const savedMsg=r=>"Saved "+hmFmt(r.secs/60)+" to "+r.h.name+"."+(r.secs>28800?" 
 const formErr=m=>{const e=document.getElementById("ferr");if(e){e.textContent=m;e.hidden=!m}if(m){const n=document.getElementById("n");if(n)n.focus()}};
 const catErr=m=>{const e=document.getElementById("cerr");if(e){e.textContent=m;e.hidden=!m}};
 document.addEventListener("toggle",e=>{const s=e.target.dataset&&e.target.dataset.sec;if(s)openSec[s]=e.target.open},true);
+/* record the new open state at click time too, so a quick re-render cannot lose it */
+document.addEventListener("click",e=>{const sm=e.target.closest&&e.target.closest("summary"),d=sm&&sm.parentElement;if(d&&d.dataset&&d.dataset.sec)openSec[d.dataset.sec]=!d.open},true);
 const csvq=s=>'"'+String(s).replace(/"/g,'""')+'"';
 /* Runs a destructive change immediately, keeps a snapshot (also in localStorage) and offers Undo. */
 function destroy(fn,text){
@@ -27,7 +29,7 @@ function applyTpl(id){
   save();render();toast(n?"Added "+n+" habits from "+T.name+". Open the Log tab to start.":"All habits in this template already exist.")}
 const notified={};
 function notifyBehind(){
-  if(!settings.notify||typeof Notification==="undefined"||Notification.permission!=="granted")return;
+  if(!settings.notify||settings.rough[TODAY()]||typeof Notification==="undefined"||Notification.permission!=="granted")return;
   behindList().forEach(b=>{const k=TODAY()+"|"+b.h.id+"|"+(b.slot?b.slot.id:"");if(notified[k])return;notified[k]=1;
     try{new Notification("Behind schedule: "+b.h.name+(b.slot?" ("+b.slot.name+")":""),{body:"It was due by the end of the "+b.p.name.toLowerCase()+" ("+b.p.to+")."})}catch(e){}})}
 /* ---- drag to reorder */
@@ -104,6 +106,28 @@ document.addEventListener("click",e=>{
     if(!(m>=1&&m<=1440)){toast("Enter the minutes spent, from 1 to 1440.");return}
     addEntry(h,D.d,{t:t||"",d:Math.round(m*60),man:1});compactEntries();save();render();return}
   if(D.edel!==undefined){const h=habits.find(x=>x.id===D.id);if(h&&h.ent&&h.ent[D.d]){h.ent[D.d].splice(+D.edel,1);if(!h.ent[D.d].length)delete h.ent[D.d];save();render()}return}
+  if(D.gtab){guideTab=D.gtab;render();return}
+  if(b.hasAttribute("data-obstart")){obStart();render();window.scrollTo(0,0);return}
+  if(b.hasAttribute("data-obnext")){ob.step=Math.min(6,ob.step+1);render();window.scrollTo(0,0);return}
+  if(b.hasAttribute("data-obback")){ob.step=Math.max(0,ob.step-1);render();return}
+  if(b.hasAttribute("data-obquit")){ob=null;settings.promptSeen=true;save();render();return}
+  if(b.hasAttribute("data-obfinish")){finishOb();return}
+  if(D.obset){ob.a[D.obset]=(ob.a[D.obset]===D.v&&["rel","kids","money"].includes(D.obset))?"":D.v;render();return}
+  if(D.obfocus){const f=ob.a.focus,i=f.indexOf(D.obfocus);if(i>=0)f.splice(i,1);else if(f.length<5)f.push(D.obfocus);else toast("Choose up to five. You can change them later.");render();return}
+  if(D.stepadd){const s=STEPS.find(x=>x.id===D.stepadd),h=s&&addStep(s);save();render();toast(h?"Added “"+h.name+"”. You will find it in your Log.":"That habit already exists.");return}
+  if(b.hasAttribute("data-stepall")){let n=0;buildPlan(settings.profile).forEach(s=>{if(settings.plan[s.id]==="skip")return;if(!habits.some(h=>h.step===s.id)&&addStep(s))n++});save();render();toast(n?"Added "+n+" habits. Start with one or two and archive the rest for later.":"Everything in your plan is already added.");return}
+  if(D.stepskip){settings.plan[D.stepskip]="skip";save();render();return}
+  if(D.stepun){delete settings.plan[D.stepun];save();render();return}
+  if(b.hasAttribute("data-showhidden")){showHidden=!showHidden;render();return}
+  if(b.hasAttribute("data-rough")){roughOpen=!roughOpen;render();return}
+  if(b.hasAttribute("data-roughon")){settings.rough[TODAY()]=1;roughOpen=false;save();render();return}
+  if(b.hasAttribute("data-roughoff")){delete settings.rough[TODAY()];save();render();return}
+  if(b.hasAttribute("data-rest")){const n=restDay();settings.rough[TODAY()]=2;roughOpen=false;save();render();toast(n?"Rest day set. "+n+" habits are left out of today's totals.":"Rest day set.");return}
+  if(b.hasAttribute("data-restundo")){undoRest();delete settings.rough[TODAY()];save();render();return}
+  if(D.tiny){const h=habits.find(x=>x.id===D.tiny);if(h&&h.tiny){const was=isDone(h,D.d);if(tmValue(h))addEntry(h,D.d,{t:"",d:Math.round(h.tiny*unitMins(h)*60),man:1});else setVal(h,D.d,null,h.tiny);save();render();logHook(h,D.d,was)}return}
+  if(b.hasAttribute("data-pdismiss")){settings.promptSeen=true;save();render();return}
+  if(b.hasAttribute("data-coachtoggle")){settings.coachOn=settings.coachOn===false;save();render();return}
+  if(b.hasAttribute("data-profreset")){destroy(()=>{settings.profile=null;settings.plan={};settings.reflections={};settings.rough={};settings.rest={}},"Your profile and guidance data were removed.");return}
   if(D.tpl){applyTpl(D.tpl);return}
   if(b.hasAttribute("data-notify")){
     if(typeof Notification==="undefined"){toast("Notifications are not available in this browser. Behind-schedule alerts still show on the Log tab.");return}
@@ -117,12 +141,12 @@ document.addEventListener("click",e=>{
     const a=Array.isArray(p)?p:p&&p.habits;if(!Array.isArray(a)||a.some(h=>!h||!h.id||!h.name||typeof h.done!=="object")){toast("Import failed: this does not look like a habit export.");return}
     destroy(()=>{habits=a;if(p&&Array.isArray(p.cats)&&p.cats.length)cats=p.cats;if(p&&p.settings)Object.assign(settings,p.settings)},"Imported "+a.length+" habits.");return}
   if(b.hasAttribute("data-dl")){try{const bl=new Blob([JSON.stringify(exportObj(),null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(bl);a.download="habit-tracker-"+TODAY()+".json";document.body.appendChild(a);a.click();a.remove();toast("Download started. If nothing downloads here, use Export JSON and copy the text.")}catch(x){toast("Download is not available here. Use Export JSON and copy the text.")}return}
-  if(b.hasAttribute("data-sample")){destroy(()=>{habits=makeSample();cats=DEFAULT_CATS.map(c=>({...c}));settings.badges={}},"Sample data loaded: 14 habits with about 6 months of history.");return}
+  if(b.hasAttribute("data-sample")){destroy(()=>{habits=makeSample();cats=DEFAULT_CATS.map(c=>({...c}));settings.badges={};if(!settings.profile)settings.profile={name:"Sam",age:"23-29",role:"grad",focus:["career","skills","move","body","fun"],rel:"",kids:"",money:"",tone:"warm",at:TODAY()}},"Sample data loaded: 14 habits with about 6 months of history.");return}
   if(b.hasAttribute("data-clear")){destroy(()=>{habits=[];settings.badges={}},"All habits and history cleared.");return}
   if(b.hasAttribute("data-undo")){if(!snap)return;const s=JSON.parse(snap);habits=s.habits;cats=s.cats;Object.assign(settings,s.settings);norm();save();render();toast("Restored.");return}
-  if(b.classList.contains("chk")){armed=null;const h=habits.find(x=>x.id===D.id);if(!h)return;
+  if(b.classList.contains("chk")){armed=null;const h=habits.find(x=>x.id===D.id);if(!h)return;const was=isDone(h,D.d);
     if(D.slot){setVal(h,D.d,D.slot,(h.done[D.d]||{})[D.slot]?0:1)}else setVal(h,D.d,null,h.done[D.d]?0:1);
-    save();render()}
+    save();render();logHook(h,D.d,was)}
 });
 /* ---- changes */
 const startOk=v=>v>=addDays(TODAY(),-7)&&v<=addDays(TODAY(),7);
@@ -130,6 +154,9 @@ document.addEventListener("change",e=>{
   const i=e.target;
   if(i.id==="t"){document.getElementById("numopts").hidden=i.value!=="num";document.getElementById("timeopts").hidden=i.value!=="time";document.getElementById("sdwrap").hidden=i.value==="group";return}
   if(i.id==="kd"){const before=settings.keepDays||30;settings.keepDays=+i.value;compactEntries();save();render();toast(+i.value<before?"Timer entries older than "+i.value+" days were merged into daily totals.":"Detailed timer entries are now kept for "+i.value+" days.");return}
+  if(i.id==="obn"){ob.a.name=i.value.trim().slice(0,30);return}
+  if(i.id==="tonesel"){settings.profile.tone=i.value;save();render();return}
+  if(i.dataset.refl){const k=i.dataset.refl,v=i.value.trim().slice(0,600);if(v)settings.reflections[k]=v;else delete settings.reflections[k];save();return}
   if(i.id==="ws"){settings.weekStart=+i.value;save();render();return}
   if(i.id==="wk"){settings.weekend=i.value.split(",").map(Number);save();render();return}
   if(i.id==="ro"){settings.rollover=+i.value;save();render();return}
@@ -160,13 +187,14 @@ document.addEventListener("change",e=>{
     else if(f==="need"){const n=Math.min((h.slots||[]).length||1,Math.max(1,parseInt(v)||1));h.need=n;i.value=n}
     else if(f==="slots"){const names=v.split(",").map(s=>s.trim()).filter(Boolean),err=slotNamesError(names);if(err){i.value=(h.slots||[]).map(s=>s.name).join(", ");toast(err);return}if(names.length>=2&&h.timer){if(settings.run&&settings.run.id===h.id)runStop();delete h.timer;toast("Timer turned off: it is not available with several times a day.")}setSlots(h,names);save();render();return}
     else if(f==="timer"){if(i.checked)h.timer=true;else{if(settings.run&&settings.run.id===h.id)runStop();delete h.timer}save();render();return}
+    else if(f==="tiny"){if(!v)delete h.tiny;else{const g=parseFloat(v);if(g>0&&(!h.target||g<h.target))h.tiny=g;else{toast("The small step must be smaller than your goal ("+h.target+"). Your earlier value was kept.");render();return}}save();render();return}
     else if(f==="mpu"){const g=parseFloat(v);if(g>0)h.mpu=g;else delete h.mpu}
     else if(f==="target"){if(h.type==="time"){if(v)h.target=v;else delete h.target}else{const g=parseFloat(v);if(g>0)h.target=g;else delete h.target}}
     save();return}
   if(i.hasAttribute("data-note")){if(i.value.trim())h.notes[i.dataset.d]=i.value.trim();else delete h.notes[i.dataset.d];save();return}
-  if(i.dataset.slot&&i.type==="number"){setVal(h,i.dataset.d,i.dataset.slot,parseFloat(i.value)||0);save();render();return}
-  if(i.type==="number"){const v=parseFloat(i.value);setVal(h,i.dataset.d,null,v>0?v:0);save();render();return}
-  if(i.type==="time"){setVal(h,i.dataset.d,null,i.value);save();render()}
+  if(i.dataset.slot&&i.type==="number"){const was=isDone(h,i.dataset.d);setVal(h,i.dataset.d,i.dataset.slot,parseFloat(i.value)||0);save();render();logHook(h,i.dataset.d,was);return}
+  if(i.type==="number"){const was=isDone(h,i.dataset.d),v=parseFloat(i.value);setVal(h,i.dataset.d,null,v>0?v:0);save();render();logHook(h,i.dataset.d,was);return}
+  if(i.type==="time"){const was=isDone(h,i.dataset.d);setVal(h,i.dataset.d,null,i.value);save();render();logHook(h,i.dataset.d,was)}
 });
 /* ---- submit */
 document.addEventListener("submit",e=>{

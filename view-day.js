@@ -27,15 +27,17 @@ function row(h,d){
   if(h.type==="time"&&v&&h.target){const df=tmin(v)-tmin(h.target);m.push(df>0?hmFmt(df)+" late":"on time")}
   const runOn=!!settings.run&&settings.run.id===h.id,tb=h.timer&&!S&&!sk&&d===TODAY()?'<button class="tbtn'+(runOn?" on":"")+'" data-ttoggle="'+h.id+'" aria-label="'+(runOn?"Pause timer for ":"Start timer for ")+esc(h.name)+'">'+(runOn?"⏸":"▶")+"</button>":"";
   if(h.timer&&!tm&&entMins(h,d)>0)m.push("⏱ "+hmFmt(entMins(h,d)));
+  if(isSmall(h,d))m.push("small step counted");
+  const tc=h.tiny&&h.type==="num"&&!S&&!sk&&d<=TODAY()&&!isDone(h,d)?'<button class="tinychip" data-tiny="'+h.id+'" data-d="'+d+'">Small step: '+h.tiny+" "+esc(h.unit||"")+"</button>":"";
   if(sk)m.push("skipped");
   if(note&&!open)m.push(esc(note));
   const pnl='<div class="pnl">'+(h.desc?'<p class="desc">'+esc(h.desc)+"</p>":"")+'<input class="nt" data-note '+id+' value="'+esc(note)+'" maxlength="200" placeholder="Note for this day" aria-label="Note for '+esc(h.name)+'">'+(h.type==="time"&&settings.rollover>0?'<p class="hint">Times before '+tstr(settings.rollover*60)+" count as late night of this day.</p>":"")+(!isWeekly(h)&&!fut?'<button class="link" data-skip="'+h.id+'" data-d="'+d+'">'+(sk?"Undo skip":"Skip this day (not counted for or against you)")+"</button>":"")+(h.timer&&!S?timeLog(h,d):"")+"</div>";
-  return '<section class="habit sm'+(sk?" skipd":"")+'" style="--c:'+h.color+'"><div class="top">'+ctl+'<div class="grow"><div class="name">'+ic(h)+esc(h.name)+'</div><div class="meta">'+m.join(" · ")+'</div></div>'+tb+'<button class="link" data-nt="'+h.id+'">'+(open?"Close":"More")+"</button></div>"+(S&&!sk?slotCells(h,d,fut):"")+(open?pnl:"")+"</section>"}
+  return '<section class="habit sm'+(sk?" skipd":"")+'" style="--c:'+h.color+'"><div class="top">'+ctl+'<div class="grow"><div class="name">'+ic(h)+esc(h.name)+'</div><div class="meta">'+m.join(" · ")+'</div></div>'+tb+'<button class="link" data-nt="'+h.id+'">'+(open?"Close":"More")+"</button></div>"+tc+(S&&!sk?slotCells(h,d,fut):"")+(open?pnl:"")+"</section>"}
 function groupCard(g,d,K,V){
   const col=settings.collapsed["g"+g.id],n=K.filter(k=>isDone(k,d)).length,ok=isDone(g,d);
   return '<section class="habit sm group" style="--c:'+g.color+'"><div class="top"><div class="gbadge'+(ok?" ok":"")+'">'+(ok?"✓":n+"/"+K.length)+'</div><div class="grow"><div class="name">'+ic(g)+esc(g.name)+'</div><div class="meta">'+streakText(g,d)+" · "+n+" of "+K.length+' done</div></div><button class="link" data-gc="'+g.id+'">'+(col?"Show":"Hide")+"</button></div>"+(col?"":'<div class="kids">'+V.map(k=>row(k,d)).join("")+"</div>")+"</section>"}
 function behindHtml(){
-  if(sel!==TODAY())return"";const b=behindList();
+  if(sel!==TODAY()||settings.rough[TODAY()])return"";const b=behindList();
   return b.length?'<div class="behind">⏰ <b>Behind schedule:</b> '+b.map(x=>ic(x.h)+esc(x.h.name)+(x.slot?" ("+esc(x.slot.name)+")":"")+", due by "+x.p.to).join(" · ")+"</div>":""}
 function cycleHtml(){
   if(sel!==TODAY())return"";const t=TODAY();
@@ -43,8 +45,8 @@ function cycleHtml(){
 function dayView(){
   const t=TODAY(),A=act(),bd=bounds(),label=sel===t?"Today":fmt(sel,{weekday:"long"});
   let h='<div class="nav"><button class="nb" data-nav="-1" '+(addDays(sel,-1)<bd.min?"disabled ":"")+'aria-label="Previous day">‹</button><b>'+label+"<br><small>"+fmt(sel,{day:"numeric",month:"long",year:"numeric"})+'</small></b><button class="nb" data-nav="1" '+(addDays(sel,1)>bd.max?"disabled ":"")+'aria-label="Next day">›</button></div>';
-  h+='<div class="tools">'+(sel!==t?'<button class="nb" data-today>Back to today</button>':"")+'<button class="nb" data-hide aria-pressed="'+!!settings.hideDone+'">Hide done</button></div>';
-  h+='<div id="behindbar">'+behindHtml()+"</div>"+cycleHtml();
+  h+='<div class="tools">'+(sel!==t?'<button class="nb" data-today>Back to today</button>':"")+'<button class="nb" data-hide aria-pressed="'+!!settings.hideDone+'">Hide done</button>'+(coachOn()&&sel===t?'<button class="nb" data-rough>Rough day?</button>':"")+'</div>';
+  h+='<div id="behindbar">'+behindHtml()+"</div>"+cycleHtml()+coachCard();
   if(!A.length)return h+'<p class="empty">No habits yet. Add one in the Habits tab, or start from a template in Settings.</p>';
   const sch=x=>x.type==="group"?kids(x).some(sch):vis(x,sel)&&(isWeekly(x)||isDue(x,sel)||x.done[sel]||skipped(x,sel));
   const want=x=>showOff?vis(x,sel):sch(x),off=A.filter(x=>x.type!=="group"&&vis(x,sel)&&!sch(x)).length;
@@ -64,3 +66,10 @@ function timeLog(h,d){
 function runHtml(){
   const h=runH();if(!h)return"";
   return '<div class="runbar">⏱ <b>'+ic(h)+esc(h.name)+'</b> <span id="runel">'+fmtClock((Date.now()-settings.run.at)/1000)+'</span><button class="nb" data-tstop>Pause</button></div>'}
+function coachCard(){
+  const t=TODAY();if(sel!==t)return"";
+  if(!settings.profile)return (!settings.promptSeen&&!habits.length)?'<div class="gcard"><b>Want guidance that fits your life?</b><p class="meta">Answer a few short questions and get small, doable steps for where you are right now. Everything stays on your device.</p><button class="add" data-obstart>Take the questionnaire</button> <button class="link" data-pdismiss>Not now</button></div>':"";
+  if(!coachOn())return"";
+  const r=settings.rough[t];
+  if(r)return '<div class="coach rough">'+esc(coachNote())+'<div class="row wrap" style="margin-top:8px">'+(r===2?'<button class="btn" data-restundo>Undo rest day</button>':'<button class="btn" data-roughoff>I am okay now</button>')+"</div></div>";
+  return (roughOpen?'<div class="gcard"><b>Some days are heavy. That is okay.</b><p class="meta">Choose what feels right. Neither choice counts against you.</p><div class="row wrap"><button class="btn" data-roughon>Small steps only</button><button class="btn" data-rest>Take a rest day</button></div><p class="hint">Small steps only: do the smallest version of what you can, and the rest can wait. Rest day: today is left out of your totals and your streaks are protected.</p></div>':"")+'<div class="coach">'+esc(coachNote())+"</div>"}

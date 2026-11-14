@@ -8,6 +8,8 @@ Static web app: no build step, no backend. Open `index.html` in a browser, or ho
 - `core.js`: constants, date helpers, state, localStorage, and every rule: frequency (`isDue`), 66-day windows (`winStart`, `cycleEnd`, `inWin`), skips, sessions (`dayVal`, `setVal`, `setSlots`), groups (`kids`), done rules (`isDone`), streaks, stats, time spent (`minsOf`), deadlines (`behindList`), calendar limits (`bounds`), reordering (`reorderSubset`). No DOM access.
 - `badges.js`: gamification. `metrics()`, the `BADGES` list, `checkBadges()`.
 - `sample.js`, `templates.js`: sample-data generator and starter habit sets.
+- `coach.js`: personalisation. Life-phase texts, the library of suggested small steps (`STEP(...)`), the plan builder, and the coach voice (rule-based, no AI, nothing leaves the device). Add or edit suggestions here.
+- `view-guide.js`: the Guide tab (questionnaire, Today, My plan, This week, Badges).
 - `view-day.js`, `view-calendar.js`, `view-reports.js`, `view-habits.js`, `view-settings.js`, `view-badges.js`: one file per tab, each returns an HTML string.
 - `ui.js`: `render()` and the navigation history (Back and Forward).
 - `app.js`: click, change, submit, drag-to-reorder, notifications, first render.
@@ -20,6 +22,7 @@ localStorage key `habit-tracker-v1`: `{v:6, settings, cats:[{id,name,color,icon}
 - habit: `{id, name, desc, icon, cat, parent, type:"yes"|"num"|"time"|"group", unit, mpu, target, freq, by, slots, need, color, created (start date), cycles, archived, done, skip, notes}`.
 - Session habits store `done[date]` as `{slotId: value}`; everything else stores a plain value.
 - Entries before the start date or after the window ends are kept but ignored and hidden.
+- Personalisation: `settings.profile` {name, age, role, focus, rel, kids, money, tone}; `settings.plan` (suggestions added or hidden), `settings.reflections`, `settings.rough` (1 small steps only, 2 rest day), `settings.rest`. A habit may have `tiny` (small step that counts as done) and `step` (the suggestion it came from).
 - Optional timer: `h.timer`, entries in `h.ent[date]=[{t,d(seconds),man,c}]`, one running timer in `settings.run`. Minutes-based number habits take their day value from the entries; entries older than `settings.keepDays` (default 30) are merged into one daily total.
 - Import, sample data and clear all write a snapshot to `habit-tracker-v1-backup` and offer Undo.
 

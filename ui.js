@@ -16,10 +16,10 @@ function render(){
   const A=act(),n=A.filter(h=>isDone(h,sel)).length;
   navList[navIdx]=navSnap();
   document.getElementById("runbar").innerHTML=runHtml();
-  const subs={day:A.length?n+" of "+A.length+" done":"No habits yet",cal:"Weekly detail, monthly overview",rep:"Totals, trends and time spent",badge:"Level and achievements",hab:"Add, edit and archive",set:"Templates, categories and backup"};
+  const subs={day:A.length?n+" of "+A.length+" done":"No habits yet",cal:"Weekly detail, monthly overview",rep:"Totals, trends and time spent",guide:"Guidance, small steps and achievements",hab:"Add, edit and archive",set:"Templates, categories and backup"};
   document.getElementById("sub").textContent=subs[view];
   document.getElementById("back").disabled=navIdx<=0;
   document.getElementById("fwd").disabled=navIdx>=navList.length-1;
   document.querySelectorAll(".tabs .tab").forEach(b=>b.setAttribute("aria-pressed",b.dataset.view===view));
-  document.getElementById("view").innerHTML={day:dayView,cal:calView,rep:repView,badge:badgesView,hab:habitsView,set:settingsView}[view]();
+  document.getElementById("view").innerHTML={day:dayView,cal:calView,rep:repView,guide:guideView,hab:habitsView,set:settingsView}[view]();
 }

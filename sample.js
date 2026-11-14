@@ -10,10 +10,10 @@ function makeSample(){
     {name:"Wake up",cat:"self",type:"time",target:"06:30",start:150,mean:405,sd:50,gain:30},
     {name:"Bedtime",cat:"self",type:"time",target:"23:00",start:150,mean:1410,sd:50,gain:25},
     {name:"Dinner",cat:"health",type:"time",target:"21:00",desc:"Log the time you ate. Use Skip this day when you fast or diet.",skipP:.12,start:120,mean:1245,sd:40,gain:10},
-    {name:"Morning run",cat:"health",type:"num",unit:"minutes",target:30,freq:{t:"weekly",n:4},start:180,base:.45,gain:.15,we:.1,lo:20,hi:55},
+    {name:"Morning run",cat:"health",type:"num",unit:"minutes",target:30,tiny:10,freq:{t:"weekly",n:4},start:180,base:.45,gain:.15,we:.1,lo:20,hi:55},
     {name:"Drink water",cat:"health",type:"num",unit:"glasses",target:8,slots:["Morning","Afternoon","Night"],start:180,base:.85,gain:.05,we:-.05,lo:2,hi:4},
-    {name:"Read",cat:"study",type:"num",unit:"pages",mpu:2,target:20,timer:true,hrs:[13,14,20,21,22],start:170,base:.6,gain:.2,we:.2,lo:8,hi:40},
-    {name:"Deep work",cat:"work",type:"num",unit:"minutes",target:90,timer:true,hrs:[9,10,11,14,15,16,20],freq:{t:"weekdays"},start:150,base:.7,gain:.15,we:0,lo:40,hi:150},
+    {name:"Read",cat:"study",type:"num",unit:"pages",mpu:2,target:20,tiny:5,timer:true,hrs:[13,14,20,21,22],start:170,base:.6,gain:.2,we:.2,lo:8,hi:40},
+    {name:"Deep work",cat:"work",type:"num",unit:"minutes",target:90,tiny:20,timer:true,hrs:[9,10,11,14,15,16,20],freq:{t:"weekdays"},start:150,base:.7,gain:.15,we:0,lo:40,hi:150},
     {name:"Meditate",cat:"self",type:"yes",mpu:10,timer:true,hrs:[6,7],start:60,base:.45,gain:.4,we:.1},
     {name:"Journal",cat:"self",type:"yes",mpu:10,freq:{t:"days",days:[0,2,4]},start:100,base:.6,gain:.3,we:0},
     {name:"TV episodes",cat:"fun",type:"num",unit:"episodes",mpu:40,start:160,base:.6,gain:0,we:.25,lo:1,hi:5},
@@ -25,7 +25,7 @@ function makeSample(){
   return defs.map((d,i)=>{
     const h={id:"s"+i,name:d.name,cat:d.cat,type:d.type,color:PAL[i%PAL.length],created:addDays(t,-d.start),cycles:Math.max(1,Math.ceil((d.start+1)/WINDOW)),done:{},notes:{}};
     const ic=d.type==="group"?"🎓":guessIcon(d.name);if(ic)h.icon=ic;
-    if(d.freq)h.freq=d.freq;if(d.unit)h.unit=d.unit;if(d.mpu)h.mpu=d.mpu;if(d.target)h.target=d.target;if(d.by)h.by=d.by;if(d.desc)h.desc=d.desc;if(d.parent)h.parent=idOf[d.parent];
+    if(d.freq)h.freq=d.freq;if(d.unit)h.unit=d.unit;if(d.mpu)h.mpu=d.mpu;if(d.tiny)h.tiny=d.tiny;if(d.target)h.target=d.target;if(d.by)h.by=d.by;if(d.desc)h.desc=d.desc;if(d.parent)h.parent=idOf[d.parent];
     if(d.slots)h.slots=d.slots.map((n,j)=>({id:"s"+j,name:n,by:guessPeriod(n)}));
     if(d.type==="group")return h;
     for(let k=d.start;k>=0;k--){

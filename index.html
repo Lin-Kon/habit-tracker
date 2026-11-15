@@ -7,22 +7,23 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles2.css">
 </head>
 <body>
 <main>
 <div class="hdr"><h1>Life OS</h1><div class="navbtns"><button id="back" class="nb" disabled aria-label="Back">‹ Back</button><button id="fwd" class="nb" disabled aria-label="Forward">Forward ›</button></div></div>
 <p class="sub" id="sub"></p>
-<div class="tabs">
-  <button class="tab" data-view="day"><span>📝</span>Log</button>
-  <button class="tab" data-view="cal"><span>🗓️</span>Calendar</button>
-  <button class="tab" data-view="rep"><span>📊</span>Reports</button>
-  <button class="tab" data-view="guide"><span>🧭</span>Guide</button>
-  <button class="tab" data-view="hab"><span>✅</span>Habits</button>
-  <button class="tab" data-view="set"><span>⚙️</span>Settings</button>
-</div>
 <div id="runbar"></div>
 <div id="view"></div>
 </main>
+<nav class="bnav" aria-label="Main">
+  <button data-view="home"><span>⏱️</span>Home</button>
+  <button data-view="day"><span>📝</span>Log</button>
+  <button data-view="goals"><span>🎯</span>Goals</button>
+  <button data-view="hab"><span>✅</span>Habits</button>
+  <button data-view="rep"><span>📊</span>Reports</button>
+  <button data-view="more"><span>☰</span>More</button>
+</nav>
 <script src="core.js"></script>
 <script src="badges.js"></script>
 <script src="sample.js"></script>
@@ -36,6 +37,11 @@
 <script src="view-badges.js"></script>
 <script src="view-guide.js"></script>
 <script src="ui.js"></script>
+<script src="timers.js"></script>
+<script src="view-home.js"></script>
+<script src="view-goals.js"></script>
+<script src="insights.js"></script>
+<script src="events.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

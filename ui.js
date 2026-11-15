@@ -19,10 +19,11 @@ function render(){
   const A=act(),n=A.filter(h=>isDone(h,sel)).length;
   navList[navIdx]=navSnap();
   document.getElementById("runbar").innerHTML=view==="home"?"":runHtml();
-  const subs={home:"Focus now, track the rest",day:A.length?n+" of "+A.length+" done":"No habits yet",cal:"Weekly detail, monthly overview",rep:"Totals, trends, time and combinations",guide:"Guidance, small steps and achievements",hab:"Add, edit and archive",set:"Templates, categories and backup",goals:"Goals, objectives and progress",more:"More from Life OS"};
+  const subs={prof:"Your profile and device sync",home:"Focus now, track the rest",day:A.length?n+" of "+A.length+" done":"No habits yet",cal:"Weekly detail, monthly overview",rep:"Totals, trends, time and combinations",guide:"Guidance, small steps and achievements",hab:"Add, edit and archive",set:"Templates, categories and backup",goals:"Goals, objectives and progress",more:"More from Life OS"};
   document.getElementById("sub").textContent=subs[view];
   document.getElementById("back").disabled=navIdx<=0;
   document.getElementById("fwd").disabled=navIdx>=navList.length-1;
   document.querySelectorAll(".bnav button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.view===view||(b.dataset.view==="more"&&MORE_VIEWS.includes(view))));
-  document.getElementById("view").innerHTML={home:homeView,day:dayView,cal:calView,rep:repView,guide:guideView,hab:habitsView,set:settingsView,goals:goalsView,more:moreView}[view]();
+  document.getElementById("view").innerHTML={prof:profileView,home:homeView,day:dayView,cal:calView,rep:repView,guide:guideView,hab:habitsView,set:settingsView,goals:goalsView,more:moreView}[view]();
+  const av=document.getElementById("avatar");if(av)av.innerHTML=avatarHtml(32);
   if(typeof tSigSync==="function")tSigSync()}

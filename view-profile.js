@@ -1,0 +1,26 @@
+/* view-profile.js: the Profile tab (name, avatar, sync, this device) and the avatar used in the header. Opened by the avatar button.
+   The account (name and avatar) is synced between devices. Device name and sync options belong to this device only. */
+const AVATARS=["🙂","😎","🤓","🦊","🐼","🦁","🐯","🐨","🐸","🦉","🐙","🦄","🌻","🌿","🔥","⭐","🚀","🎧","📚","💪","🧘","🎯","☕","🌙"];
+const initials=n=>{const w=String(n||"").trim().split(/\s+/).filter(Boolean);return w.length?(w[0][0]+(w.length>1?w[w.length-1][0]:"")).toUpperCase():"?"};
+function avatarHtml(px){
+  const a=ensureAccount(),v=a.avatar,st='style="--s:'+px+"px;--c:"+(HEX.test(v.color)?v.color:PAL[0])+'"';
+  if(v.photo&&settings.avatarImg)return '<span class="avatar" '+st+'><img alt="" src="'+esc(settings.avatarImg)+'"></span>';
+  return '<span class="avatar" '+st+">"+esc(v.emoji||initials(a.name))+"</span>"}
+const agoText=t=>{const m=Math.round((Date.now()-t)/6e4);return m<1?"just now":m<60?m+" min ago":m<1440?Math.round(m/60)+" h ago":fmt(ds(new Date(t)),{day:"numeric",month:"short"})};
+function profileView(){
+  const a=ensureAccount(),v=a.avatar,o=DEVICE.opts,L=DEVICE.last;
+  const sel=(id,list,cur)=>'<select id="'+id+'">'+list.map(([x,l])=>'<option value="'+x+'"'+(String(cur)===String(x)?" selected":"")+">"+l+"</option>").join("")+"</select>";
+  return '<div class="gcard"><div class="pfhead">'+avatarHtml(72)+'<div class="grow"><label class="note" for="pf-name">Your name</label><input id="pf-name" maxlength="40" value="'+esc(a.name)+'" placeholder="Name or nickname" autocomplete="off"></div></div>'
+   +'<label class="note">Avatar</label><div class="ip"><button type="button" data-pa="emoji" data-v="" aria-pressed="'+(!v.emoji&&!v.photo)+'" aria-label="Use my initials">Aa</button>'
+   +AVATARS.map(e=>'<button type="button" data-pa="emoji" data-v="'+e+'" aria-pressed="'+(!v.photo&&v.emoji===e)+'">'+e+"</button>").join("")+"</div>"
+   +'<label class="note">Colour</label>'+swatches("data-pcol",v.color)
+   +'<div class="row wrap" style="margin-top:8px"><label class="btn">'+(v.photo?"Change photo":"Use a photo")+'<input id="pf-photo" type="file" accept="image/*" hidden></label>'+(v.photo?'<button class="btn" data-pa="nophoto">Remove photo</button>':"")+'</div><p class="hint">A photo is shrunk to a small square and kept on your devices only.</p></div>'
+   +'<div class="gcard"><b>Sync with another device</b><p class="meta">Your data lives on this device. To use it on another phone or computer, send it with a QR code. No internet, no account server, and nothing leaves your devices. Both sides are merged, so nothing is overwritten and the newer change wins.</p>'
+   +'<div class="row wrap"><button class="add" data-pa="send">Send to a device</button><button class="btn" data-pa="receive">Receive from a device</button></div>'
+   +'<p class="meta" style="margin-top:10px">Both devices on the same Wi-Fi? Connect directly and each sends the other its data in one go.</p><div class="row wrap"><button class="btn" data-pa="lanhost">Connect over Wi-Fi</button><button class="btn" data-pa="lanjoin">Join over Wi-Fi</button></div>'
+   +'<p class="hint">'+(L?"Last merge: "+esc(agoText(L.at))+" from "+esc(L.from)+", "+L.n+(L.n===1?" change":" changes")+".":"No merge yet on this device.")+" To get the same data on both devices, send in one direction, then send back.</p></div>"
+   +'<div class="gcard"><summary>This device</summary><label class="note" for="pf-dev">Device name</label><input id="pf-dev" maxlength="30" value="'+esc(DEVICE.name)+'" placeholder="'+esc(deviceGuess())+'" autocomplete="off">'
+   +'<div class="cols"><div><label class="note" for="pf-dens">QR size</label>'+sel("pf-dens",[["s","Small: easiest to scan"],["m","Medium"],["l","Large: fewest frames"]],o.density)+'</div><div><label class="note" for="pf-speed">QR speed</label>'+sel("pf-speed",[[2,"Slow: 2 a second"],[4,"Normal: 4 a second"],[6,"Fast: 6 a second"]],o.speed)+"</div></div>"
+   +(v.photo?'<label class="chkrow" style="margin-top:8px"><input type="checkbox" id="pf-photosync"'+(o.photo?" checked":"")+"> Include my photo when sending (adds frames)</label>":"")
+   +'<p class="hint">These options are saved on this device only.</p></div>'
+   +'<details><summary>How sync works</summary><ul class="nl"><li>Each device keeps a full copy. Sending shows your data as a short loop of QR codes. The other device scans them in any order.</li><li>Before anything changes you see a summary and choose Merge. You can undo a merge right afterwards.</li><li>Per day and per habit, the newest change wins. Habits that exist on only one device are added. A habit deleted on one device is deleted on the other.</li><li>Both devices need the correct date and time.</li><li>No camera or no scanner support? Use Copy code and Paste, or Save file and Open file.</li><li>Export JSON in Settings is still the safest full backup.</li></ul></details>'}

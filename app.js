@@ -13,7 +13,7 @@ document.addEventListener("click",e=>{const sm=e.target.closest&&e.target.closes
 const csvq=s=>'"'+String(s).replace(/"/g,'""')+'"';
 /* Runs a destructive change immediately, keeps a snapshot (also in localStorage) and offers Undo. */
 function destroy(fn,text){
-  snap=JSON.stringify({habits,cats,settings});try{localStorage.setItem(KEY+"-backup",snap)}catch(e){}
+  snap=JSON.stringify({habits,cats,settings,stamps:SYNC.stamps});try{localStorage.setItem(KEY+"-backup",snap)}catch(e){}
   badgeQuiet=true;fn();norm();save();badgeQuiet=false;render();toast(text,true)}
 function applyTpl(id){
   const T=TEMPLATES.find(x=>x.id===id);let n=0,grp=null;
@@ -143,7 +143,7 @@ document.addEventListener("click",e=>{
   if(b.hasAttribute("data-dl")){try{const bl=new Blob([JSON.stringify(exportObj(),null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(bl);a.download="habit-tracker-"+TODAY()+".json";document.body.appendChild(a);a.click();a.remove();toast("Download started. If nothing downloads here, use Export JSON and copy the text.")}catch(x){toast("Download is not available here. Use Export JSON and copy the text.")}return}
   if(b.hasAttribute("data-sample")){destroy(()=>{habits=makeSample();cats=DEFAULT_CATS.map(c=>({...c}));settings.badges={};if(!settings.profile)settings.profile={name:"Sam",age:"23-29",role:"grad",focus:["career","skills","move","body","fun"],rel:"",kids:"",money:"",tone:"warm",at:TODAY()}},"Sample data loaded: 14 habits with about 6 months of history.");return}
   if(b.hasAttribute("data-clear")){destroy(()=>{habits=[];settings.badges={}},"All habits and history cleared.");return}
-  if(b.hasAttribute("data-undo")){if(!snap)return;const s=JSON.parse(snap);habits=s.habits;cats=s.cats;Object.assign(settings,s.settings);norm();save();render();toast("Restored.");return}
+  if(b.hasAttribute("data-undo")){if(!snap)return;const s=JSON.parse(snap);habits=s.habits;cats=s.cats;Object.assign(settings,s.settings);if(s.stamps)SYNC.stamps=s.stamps;norm();save();render();toast("Restored.");return}
   if(b.classList.contains("chk")){armed=null;const h=habits.find(x=>x.id===D.id);if(!h)return;const was=isDone(h,D.d);
     if(D.slot){setVal(h,D.d,D.slot,(h.done[D.d]||{})[D.slot]?0:1)}else setVal(h,D.d,null,h.done[D.d]?0:1);
     save();render();logHook(h,D.d,was)}

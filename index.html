@@ -1,47 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Life OS: habit tracker</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="styles2.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Life OS: habit tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles2.css">
 </head>
+
 <body>
-<main>
-<div class="hdr"><h1>Life OS</h1><div class="navbtns"><button id="back" class="nb" disabled aria-label="Back">‹ Back</button><button id="fwd" class="nb" disabled aria-label="Forward">Forward ›</button></div></div>
-<p class="sub" id="sub"></p>
-<div id="runbar"></div>
-<div id="view"></div>
-</main>
-<nav class="bnav" aria-label="Main">
-  <button data-view="home"><span>⏱️</span>Home</button>
-  <button data-view="day"><span>📝</span>Log</button>
-  <button data-view="goals"><span>🎯</span>Goals</button>
-  <button data-view="hab"><span>✅</span>Habits</button>
-  <button data-view="rep"><span>📊</span>Reports</button>
-  <button data-view="more"><span>☰</span>More</button>
-</nav>
-<script src="core.js"></script>
-<script src="badges.js"></script>
-<script src="sample.js"></script>
-<script src="templates.js"></script>
-<script src="coach.js"></script>
-<script src="view-day.js"></script>
-<script src="view-calendar.js"></script>
-<script src="view-reports.js"></script>
-<script src="view-habits.js"></script>
-<script src="view-settings.js"></script>
-<script src="view-badges.js"></script>
-<script src="view-guide.js"></script>
-<script src="ui.js"></script>
-<script src="timers.js"></script>
-<script src="view-home.js"></script>
-<script src="view-goals.js"></script>
-<script src="insights.js"></script>
-<script src="events.js"></script>
-<script src="app.js"></script>
+  <main>
+    <div class="hdr">
+      <h1>Life OS</h1>
+      <div class="navbtns">
+        <button id="avatar" class="avbtn" data-view="prof" aria-label="Profile and sync"></button>
+        <button id="back" class="nb" disabled aria-label="Back">‹ Back</button>
+        <button id="fwd" class="nb" disabled aria-label="Forward">Forward ›</button>
+      </div>
+    </div>
+    <p class="sub" id="sub"></p>
+    <div id="runbar"></div>
+    <div id="view"></div>
+  </main>
+
+  <nav class="bnav" aria-label="Main">
+    <button data-view="home"><span>⏱️</span>Home</button>
+    <button data-view="day"><span>📝</span>Log</button>
+    <button data-view="goals"><span>🎯</span>Goals</button>
+    <button data-view="hab"><span>✅</span>Habits</button>
+    <button data-view="rep"><span>📊</span>Reports</button>
+    <button data-view="more"><span>☰</span>More</button>
+  </nav>
+
+  <!-- 1. Core: constants, state, rules. Must be first. -->
+  <script src="core.js"></script>
+
+  <!-- 2. Logic and content: no DOM work at load time -->
+  <script src="badges.js"></script>
+  <script src="coach.js"></script>
+  <script src="events.js"></script>
+  <script src="sample.js"></script>
+  <script src="templates.js"></script>
+  <script src="timers.js"></script>
+
+  <!-- 3. Sync and sharing -->
+  <script src="sync-core.js"></script>
+  <script src="qr.js"></script>
+  <script src="lan-sync.js"></script>
+  
+  <!-- 4. Views: each returns an HTML string -->
+  <script src="view-badges.js"></script>
+  <script src="view-calendar.js"></script>
+  <script src="view-day.js"></script>
+  <script src="view-goals.js"></script>
+  <script src="view-guide.js"></script>
+  <script src="view-habits.js"></script>
+  <script src="view-home.js"></script>
+  <script src="view-profile.js"></script>
+  <script src="view-settings.js"></script>
+  <script src="view-reports.js"></script>
+  <script src="insights.js"></script>
+
+  <!-- 5. Navigation and rendering -->
+  <script src="ui.js"></script>
+
+  <!-- 6. Boot: last, because they run on load or wire up the UI -->
+  <script src="app.js"></script>
+  <script src="sync-ui.js"></script>
 </body>
+
 </html>

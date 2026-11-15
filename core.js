@@ -75,7 +75,12 @@ function norm(){
   if(settings.run&&!habits.some(h=>h.id===settings.run.id))settings.run=null;
   compactEntries()}
 norm();
-const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify({v:6,settings,cats,habits}))}catch(e){}};
+// const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify({v:6,settings,cats,habits}))}catch(e){}};
+let persistFailed=false;
+const persist=()=>{
+  try{if(typeof syncStamp==="function")syncStamp()}catch(e){}
+  try{localStorage.setItem(KEY,JSON.stringify({v:6,settings,cats,habits}));persistFailed=false;return true}
+  catch(e){if(!persistFailed&&typeof toast==="function")toast("Could not save: browser storage is full or blocked. Export a backup now.");persistFailed=true;return false}};
 const save=()=>{persist();if(typeof checkBadges==="function")checkBadges(badgeQuiet)};
 const act=()=>habits.filter(h=>!h.archived);
 const WD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];

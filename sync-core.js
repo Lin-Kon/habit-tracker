@@ -91,6 +91,7 @@ function cleanHabit(v,id){
 /* Returns the cleaned value, or undefined when the record is not acceptable. */
 function cleanValue(k,v){
   const t=k[0];
+  if(typeof vaultOn==="function"&&vaultOn()&&(t==="n"||(t==="m"&&k.split("|")[1]==="reflections")))return;
   if(t==="h")return cleanHabit(v,k.slice(2));
   if(t==="c"){if(!isObj(v)||typeof v.name!=="string"||!v.name.trim()||!HEX.test(v.color))return;return{id:k.slice(2),name:v.name.trim().slice(0,30),color:v.color,icon:str(v.icon,8)}}
   if(t==="d"){

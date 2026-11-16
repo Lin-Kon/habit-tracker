@@ -11,6 +11,12 @@
     rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="styles2.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <meta name="theme-color" content="#2d5a3d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Life OS">
 </head>
 
 <body>
@@ -37,6 +43,7 @@
     <button data-view="more"><span>☰</span>More</button>
   </nav>
 
+  <script src="store.js"></script>
   <!-- 1. Core: constants, state, rules. Must be first. -->
   <script src="core.js"></script>
 
@@ -47,12 +54,13 @@
   <script src="sample.js"></script>
   <script src="templates.js"></script>
   <script src="timers.js"></script>
+  <script src="vault.js"></script>
 
   <!-- 3. Sync and sharing -->
   <script src="sync-core.js"></script>
   <script src="qr.js"></script>
   <script src="lan-sync.js"></script>
-  
+
   <!-- 4. Views: each returns an HTML string -->
   <script src="view-badges.js"></script>
   <script src="view-calendar.js"></script>
@@ -71,6 +79,7 @@
 
   <!-- 6. Boot: last, because they run on load or wire up the UI -->
   <script src="app.js"></script>
+  <script>if("serviceWorker" in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js");</script>
   <script src="sync-ui.js"></script>
 </body>
 

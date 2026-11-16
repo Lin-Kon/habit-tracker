@@ -14,7 +14,7 @@ function slotCells(h,d,fut){
     const c=h.type==="num"?'<input type="number" min="0" step="any" inputmode="decimal" '+at+' value="'+(v[s.id]||"")+'" placeholder="0" '+(fut?"disabled":"")+' aria-label="'+al+'">':'<button class="chk slot" '+at+' aria-pressed="'+!!v[s.id]+'" '+(fut?"disabled":"")+' aria-label="'+al+'">'+(v[s.id]?"✓":"")+"</button>";
     return '<div class="slot"><span>'+lab+"</span>"+c+"</div>"}).join("")+"</div>"}
 function row(h,d){
-  const fut=d>TODAY(),sk=skipped(h,d),dis=fut?"disabled":"",id='data-id="'+h.id+'" data-d="'+d+'"',v=h.done[d],note=h.notes[d]||"",open=noteOpen[h.id],S=hasSlots(h),m=[streakText(h,d)],tm=tmValue(h);
+  const fut=d>TODAY(),sk=skipped(h,d),dis=fut?"disabled":"",id='data-id="'+h.id+'" data-d="'+d+'"',v=h.done[d],note=noteGet(h,d),nlock=noteLocked(h,d),open=noteOpen[h.id],S=hasSlots(h),m=[streakText(h,d)],tm=tmValue(h);
   let ctl;
   if(sk)ctl='<div class="skipbox">Skip</div>';
   else if(S)ctl='<div class="gbadge'+(isDone(h,d)?" ok":"")+'">'+(isDone(h,d)?"✓":r1(dayVal(h,d)))+"</div>";
@@ -30,8 +30,9 @@ function row(h,d){
   if(isSmall(h,d))m.push("small step counted");
   const tc=h.tiny&&h.type==="num"&&!S&&!sk&&d<=TODAY()&&!isDone(h,d)?'<button class="tinychip" data-tiny="'+h.id+'" data-d="'+d+'">Small step: '+h.tiny+" "+esc(h.unit||"")+"</button>":"";
   if(sk)m.push("skipped");
-  if(note&&!open)m.push(esc(note));
-  const pnl='<div class="pnl">'+(h.desc?'<p class="desc">'+esc(h.desc)+"</p>":"")+'<input class="nt" data-note '+id+' value="'+esc(note)+'" maxlength="200" placeholder="Note for this day" aria-label="Note for '+esc(h.name)+'">'+(h.type==="time"&&settings.rollover>0?'<p class="hint">Times before '+tstr(settings.rollover*60)+" count as late night of this day.</p>":"")+(!isWeekly(h)&&!fut?'<button class="link" data-skip="'+h.id+'" data-d="'+d+'">'+(sk?"Undo skip":"Skip this day (not counted for or against you)")+"</button>":"")+(h.timer&&!S?timeLog(h,d):"")+"</div>";
+  // if(note&&!open)m.push(esc(note));
+  if(nlock&&!open)m.push("🔒 Locked note");else if(note&&!open)m.push(esc(note));
+  const pnl='<div class="pnl">'+(h.desc?'<p class="desc">'+esc(h.desc)+"</p>":"")+'<input class="nt" data-note '+id+' value="'+esc(nlock?"":note)+'" maxlength="200"'+(nlock?" disabled":"")+ 'placeholder="Note for this day" aria-label="Note for '+esc(h.name)+'">'+(h.type==="time"&&settings.rollover>0?'<p class="hint">Times before '+tstr(settings.rollover*60)+" count as late night of this day.</p>":"")+(!isWeekly(h)&&!fut?'<button class="link" data-skip="'+h.id+'" data-d="'+d+'">'+(sk?"Undo skip":"Skip this day (not counted for or against you)")+"</button>":"")+(h.timer&&!S?timeLog(h,d):"")+"</div>";
   return '<section class="habit sm'+(sk?" skipd":"")+'" style="--c:'+h.color+'"><div class="top">'+ctl+'<div class="grow"><div class="name">'+ic(h)+esc(h.name)+'</div><div class="meta">'+m.join(" · ")+'</div></div>'+tb+'<button class="link" data-nt="'+h.id+'">'+(open?"Close":"More")+"</button></div>"+tc+(S&&!sk?slotCells(h,d,fut):"")+(open?pnl:"")+"</section>"}
 function groupCard(g,d,K,V){
   const col=settings.collapsed["g"+g.id],n=K.filter(k=>isDone(k,d)).length,ok=isDone(g,d);

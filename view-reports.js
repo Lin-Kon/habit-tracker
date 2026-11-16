@@ -58,7 +58,7 @@ function repView(){
     const GL=S.g?[]:(S.c?groups.filter(g=>g.cat===S.c.id):groups);
     if(GL.length)det+=rsec("rg","By group",GL.map(g=>mrow(ic(g)+esc(g.name),g.color,stats(g,from,t)," · "+kids(g).length+(kids(g).length===1?" sub-habit":" sub-habits")+" · streak "+streak(g)+" · best "+longest(g),g.id)).join(""),false,GL.length);
     det+=rsec("rh","By habit",per.map(p=>mrow(ic(p.h)+esc(p.h.name)+grpTag(p.h),p.h.color,p,habitExtra(p.h,p),p.h.id)).join(""),false,per.length)}
-  else{const ks=Object.keys(one.notes).sort().reverse().slice(0,8);det+=rsec("rn","Recent notes",ks.length?'<ul class="nl">'+ks.map(d=>"<li><b>"+fmt(d,{day:"numeric",month:"short"})+"</b> "+esc(one.notes[d])+"</li>").join("")+"</ul>":'<p class="empty">No notes yet.</p>',ks.length>0,ks.length)}
+  else{const ks=Object.keys(one.notes).sort().reverse().slice(0,8);det+=rsec("rn","Recent notes",ks.length?'<ul class="nl">'+ks.map(d=>"<li><b>"+fmt(d,{day:"numeric",month:"short"})+"</b> "+(noteLocked(one,d)?"🔒 Locked note":esc(noteGet(one,d)))+"</li>").join("")+"</ul>":'<p class="empty">No notes yet.</p>',ks.length>0,ks.length)}
   return h+rsec("rs","Summary",sum,true)+rsec("rd","Details",det,true)}
 function periodIdx(t){const P=settings.periods;for(let i=P.length-1;i>=0;i--)if(hm2m(t)>=hm2m(P[i].from))return i;return 0}
 /* Timed minutes by the time of day each timer entry started. Only shows when timer entries exist, so most people never see it. */

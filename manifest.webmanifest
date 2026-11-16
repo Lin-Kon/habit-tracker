@@ -1,0 +1,42 @@
+{
+    "name": "Life OS: habit tracker",
+    "short_name": "Life OS",
+    "id": "./",
+    "start_url": "./index.html",
+    "scope": "./",
+    "display": "standalone",
+    "background_color": "#f2f4ee",
+    "theme_color": "#2d5a3d",
+    "icons": [
+        {
+            "src": "icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Log today",
+            "url": "./index.html?view=day",
+            "icons": [
+                {
+                    "src": "icon.svg",
+                    "sizes": "any",
+                    "type": "image/svg+xml"
+                }
+            ]
+        },
+        {
+            "name": "Reports",
+            "url": "./index.html?view=rep",
+            "icons": [
+                {
+                    "src": "icon.svg",
+                    "sizes": "any",
+                    "type": "image/svg+xml"
+                }
+            ]
+        }
+    ]
+}

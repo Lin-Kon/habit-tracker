@@ -30,8 +30,9 @@ const tmin=v=>{const[a,b]=v.split(":").map(Number),m=a*60+b;return m<settings.ro
 const tstr=m=>{m=Math.round(m)%1440;return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0")};
 let habits=[],cats=[],settings={weekStart:6,weekend:[5,6],rollover:4,notify:false,hideDone:false,collapsed:{},hcollapsed:{},badges:{},periods:null,profile:null,plan:{},reflections:{},rough:{},rest:{},coachOn:true,promptSeen:false},armed=null,view="day",rng=30,sel=TODAY(),repScope="all",snap=null;
 let calMode="week",calScope="all",calDate=TODAY(),calPick=null,editing=null,showNew=false,showOff=false,reorder=false,noteOpen={},openSec={},iconEdit=null,badgeQuiet=false;
-try{const p=JSON.parse(localStorage.getItem(KEY));habits=Array.isArray(p)?p:(p&&p.habits)||[];if(p&&p.settings)Object.assign(settings,p.settings);if(p&&Array.isArray(p.cats))cats=p.cats}catch(e){habits=[]}
-if(!settings.v5){settings.weekStart=6;settings.v5=1}
+// the load from localStorage runs at boot now
+// try{const p=JSON.parse(localStorage.getItem(KEY));habits=Array.isArray(p)?p:(p&&p.habits)||[];if(p&&p.settings)Object.assign(settings,p.settings);if(p&&Array.isArray(p.cats))cats=p.cats}catch(e){habits=[]}
+// if(!settings.v5){settings.weekStart=6;settings.v5=1}
 /* ---- validation helpers (names must be unique; times of day must follow each other without gaps or overlaps) */
 const PMIN=30;
 const normName=s=>String(s).trim().replace(/\s+/g," ").toLowerCase();
@@ -63,6 +64,7 @@ const daysLeft=h=>dayDiff(TODAY(),cycleEnd(h));
 const nearEnd=h=>h.type!=="group"&&!h.archived&&h.created<=TODAY()&&daysLeft(h)<=14;
 function norm(){
   ["collapsed","hcollapsed","badges","plan","reflections","rough","rest"].forEach(k=>settings[k]=settings[k]||{});
+  settings.a11y=Object.assign({contrast:false,motion:"auto",text:100},settings.a11y);
   if(!Array.isArray(settings.weekend))settings.weekend=[5,6];
   fixPeriods();
   if(typeof settings.rollover!=="number")settings.rollover=4;
@@ -74,13 +76,13 @@ function norm(){
   if(typeof settings.keepDays!=="number")settings.keepDays=30;
   if(settings.run&&!habits.some(h=>h.id===settings.run.id))settings.run=null;
   compactEntries()}
-norm();
 // const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify({v:6,settings,cats,habits}))}catch(e){}};
 let persistFailed=false;
-const persist=()=>{
-  try{if(typeof syncStamp==="function")syncStamp()}catch(e){}
-  try{localStorage.setItem(KEY,JSON.stringify({v:6,settings,cats,habits}));persistFailed=false;return true}
-  catch(e){if(!persistFailed&&typeof toast==="function")toast("Could not save: browser storage is full or blocked. Export a backup now.");persistFailed=true;return false}};
+const persist=()=>persistState({v:6,settings,cats,habits});
+// const persist=()=>{
+//   try{if(typeof syncStamp==="function")syncStamp()}catch(e){}
+//   try{localStorage.setItem(KEY,JSON.stringify({v:6,settings,cats,habits}));persistFailed=false;return true}
+//   catch(e){if(!persistFailed&&typeof toast==="function")toast("Could not save: browser storage is full or blocked. Export a backup now.");persistFailed=true;return false}};
 const save=()=>{persist();if(typeof checkBadges==="function")checkBadges(badgeQuiet)};
 const act=()=>habits.filter(h=>!h.archived);
 const WD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];

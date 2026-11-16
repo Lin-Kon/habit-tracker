@@ -220,7 +220,7 @@ document.addEventListener("click", e => {
   if (D.exp) {
     const o = document.getElementById("out");
     if (D.exp === "json") o.value = JSON.stringify(exportObj(), null, 2);
-    else { const L = ["date,habit,category,type,value,done,skipped,note"]; habits.forEach(h => { const cn = (cats.find(c => c.id === h.cat) || {}).name || ""; new Set([...Object.keys(h.done), ...Object.keys(h.notes), ...Object.keys(h.skip || {})]).forEach(d => L.push([d, csvq(h.name), csvq(cn), h.type, dayVal(h, d) || "", isDone(h, d) ? "yes" : "no", skipped(h, d) ? "yes" : "", csvq(noteGet(h,d))].join(","))) }); o.value = L.join("\n") }
+    else { const L = ["date,habit,category,type,value,done,skipped,note"]; habits.forEach(h => { const cn = (cats.find(c => c.id === h.cat) || {}).name || ""; new Set([...Object.keys(h.done), ...Object.keys(h.notes), ...Object.keys(h.skip || {})]).forEach(d => L.push([d, csvq(h.name), csvq(cn), h.type, dayVal(h, d) || "", isDone(h, d) ? "yes" : "no", skipped(h, d) ? "yes" : "", csvq(noteGet(h, d))].join(","))) }); o.value = L.join("\n") }
     o.focus(); o.select(); toast("Export ready. Copy the text above and save it somewhere safe."); return
   }
   if (b.hasAttribute("data-imp")) {
@@ -242,7 +242,7 @@ document.addEventListener("click", e => {
 const startOk = v => v >= addDays(TODAY(), -7) && v <= addDays(TODAY(), 7);
 document.addEventListener("change", e => {
   const i = e.target;
-  if(i.id==="lidle"){settings.lockMins=+i.value;save();render();return}
+  if (i.id === "lidle") { settings.lockMins = +i.value; save(); render(); return }
   if (i.id === "a11yc" || i.id === "a11ym" || i.id === "a11yt") {
     settings.a11y = Object.assign({ contrast: false, motion: "auto", text: 100 }, settings.a11y);
     if (i.id === "a11yc") settings.a11y.contrast = i.checked;
@@ -299,7 +299,7 @@ document.addEventListener("change", e => {
     save(); return
   }
   // if (i.hasAttribute("data-note")) { if (i.value.trim()) h.notes[i.dataset.d] = i.value.trim(); else delete h.notes[i.dataset.d]; save(); return }
-    if(i.hasAttribute("data-note")){noteSet(h,i.dataset.d,i.value.trim()).then(ok=>{if(!ok)toast("Unlock to change private notes.");save();render()});return}
+  if (i.hasAttribute("data-note")) { noteSet(h, i.dataset.d, i.value.trim()).then(ok => { if (!ok) toast("Unlock to change private notes."); save(); render() }); return }
   if (i.dataset.slot && i.type === "number") { const was = isDone(h, i.dataset.d); setVal(h, i.dataset.d, i.dataset.slot, parseFloat(i.value) || 0); save(); render(); logHook(h, i.dataset.d, was); return }
   if (i.type === "number") { const was = isDone(h, i.dataset.d), v = parseFloat(i.value); setVal(h, i.dataset.d, null, v > 0 ? v : 0); save(); render(); logHook(h, i.dataset.d, was); return }
   if (i.type === "time") { const was = isDone(h, i.dataset.d); setVal(h, i.dataset.d, null, i.value); save(); render(); logHook(h, i.dataset.d, was) }

@@ -25,7 +25,7 @@ function applyA11y() {
   r.dataset.text = String(a.text || 100);
 }
 function render() {
-  applyA11y(); 
+  applyA11y();
   const A = act(), n = A.filter(h => isDone(h, sel)).length;
   navList[navIdx] = navSnap();
   document.getElementById("runbar").innerHTML = view === "home" ? "" : runHtml();

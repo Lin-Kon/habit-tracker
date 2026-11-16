@@ -226,7 +226,7 @@ details.rs summary{font-size:1.02rem}
 .letter p{margin:8px 0}
 .chip{--c:var(--moss)}
 
-/* ---- profile, avatar and sync screens (append to the end of styles.css) */
+/* ---- profile, avatar and sync screens */
 .navbtns{align-items:center}
 .avbtn{padding:0;border:0;background:none;border-radius:50%;display:flex;line-height:0}
 .avatar{--s:40px;width:var(--s);height:var(--s);flex:none;border-radius:50%;border:2px solid var(--c,var(--moss));background:color-mix(in srgb,var(--c,var(--moss)) 20%,var(--card));display:inline-flex;align-items:center;justify-content:center;font-size:calc(var(--s)*.46);font-weight:700;overflow:hidden;line-height:1}
@@ -240,3 +240,4 @@ details.rs summary{font-size:1.02rem}
 .qrcv{width:100%;max-width:360px;margin:0 auto;display:block;border-radius:8px;image-rendering:pixelated;background:#fff}
 .vid{border-radius:12px;overflow:hidden;background:#000;aspect-ratio:1/1;max-width:360px;margin:0 auto;width:100%}
 .vid video{width:100%;height:100%;object-fit:cover;display:block}
+.devrow{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:6px 0;background:var(--bg)}

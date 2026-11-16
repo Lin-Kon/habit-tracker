@@ -9,7 +9,10 @@
    Both devices must have the right time. Records stamped more than 5 minutes in the future are treated as "now".
 
    Account (settings.account, synced): {id, name, avatar:{emoji,color,photo}, created}. The photo itself is settings.avatarImg.
-   Device (its own localStorage key, never synced or exported): {id, name, opts:{density,speed,photo}, last, log}.
+   Device (its own localStorage key, never synced or exported): {id, name, opts, last, log, devices, pending}.
+   devices = trusted devices {id:{id,name,secret,kid,since,last}}. A shared 256-bit secret is created on the first send to a "new" device and travels inside that first
+   (plain) code. The other side saves it when you merge; its reply, encrypted with the secret, makes the first device save the pairing too. Later codes between
+   the two are AES-GCM encrypted, so they can go through any app (messages, email, share sheet, file) without exposing your data.
    Change stamps live in their own key too: KEY+"-sync" = {v:1, stamps:{recordKey:[time,hash]}} (hash 0 = deleted).
 
    Everything that arrives is checked and rebuilt field by field (cleanHabit, cleanValue). If you add a field to a habit, add it to cleanHabit,
@@ -31,6 +34,7 @@ try{DEVICE=JSON.parse(localStorage.getItem(DEV_KEY))}catch(e){DEVICE=null}
 if(!isObj(DEVICE)||!DEVICE.id)DEVICE={id:"d"+rid(10),name:"",opts:{},last:null,log:[]};
 DEVICE.opts=Object.assign({density:"m",speed:4,photo:false},isObj(DEVICE.opts)?DEVICE.opts:{});
 if(!Array.isArray(DEVICE.log))DEVICE.log=[];
+if(!isObj(DEVICE.devices))DEVICE.devices={};if(!isObj(DEVICE.pending))DEVICE.pending={};
 const saveDevice=()=>{try{localStorage.setItem(DEV_KEY,JSON.stringify(DEVICE))}catch(e){}};
 const writeStamps=()=>{try{localStorage.setItem(SYNC_KEY,JSON.stringify({v:1,stamps:SYNC.stamps}))}catch(e){}};
 function ensureAccount(){
@@ -123,7 +127,9 @@ function syncPacket(o){
     if(!o.photo&&k==="s|avatarImg")continue;
     const s=S[k];(g[s[0]]=g[s[0]]||[]).push(s[1]===0?[k]:[k,F[k]]);n++}
   const a=ensureAccount();
-  return{app:"lifeos",v:1,acct:a.id,an:a.name,dev:DEVICE.id,dn:DEVICE.name||deviceGuess(),at:Date.now(),n,r:g}}
+  const pkt={app:"lifeos",v:1,acct:a.id,an:a.name,dev:DEVICE.id,dn:DEVICE.name||deviceGuess(),at:Date.now(),n,r:g};
+  if(o.pairSecret)pkt.pair={secret:o.pairSecret};
+  return pkt}
 const b64u=bytes=>{let s="";for(let i=0;i<bytes.length;i+=8192)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")};
 const unb64u=s=>{s=s.replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u};
 const pipeBytes=async(bytes,T)=>new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new T("gzip"))).arrayBuffer());
@@ -131,13 +137,49 @@ const pipeBytes=async(bytes,T)=>new Uint8Array(await new Response(new Blob([byte
 async function syncPack(pkt){
   const raw=new TextEncoder().encode(JSON.stringify(pkt));
   return typeof CompressionStream==="function"?"z"+b64u(await pipeBytes(raw,CompressionStream)):"r"+b64u(raw)}
+const cryptoOk=()=>typeof crypto!=="undefined"&&!!crypto.subtle;
+const kidOf=secret=>cyrb53(secret).toString(36).padStart(11,"0").slice(0,11);
+const newSecret=()=>b64u(crypto.getRandomValues(new Uint8Array(32)));
+const keyCache={};
+const aesKey=async secret=>keyCache[secret]||(keyCache[secret]=await crypto.subtle.importKey("raw",unb64u(secret),"AES-GCM",false,["encrypt","decrypt"]));
+/* Encrypted text form: "e" + key id (11) + iv (16) + ciphertext. AES-GCM, so a changed or forged code is rejected. */
+async function syncEncrypt(pkt,secret){
+  const raw=new TextEncoder().encode(JSON.stringify(pkt)),z=typeof CompressionStream==="function",body=z?await pipeBytes(raw,CompressionStream):raw,pt=new Uint8Array(body.length+1);
+  pt[0]=z?1:0;pt.set(body,1);
+  const iv=crypto.getRandomValues(new Uint8Array(12)),ct=new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv},await aesKey(secret),pt));
+  return"e"+kidOf(secret)+b64u(iv)+b64u(ct)}
 async function syncUnpack(text){
   text=String(text||"").trim();if(text.startsWith(CODE_PREFIX))text=text.slice(CODE_PREFIX.length);
-  if(!/^[zr][\w-]+$/.test(text))throw new Error("This is not a Life OS sync code.");
-  const b=unb64u(text.slice(1));let raw;
-  if(text[0]==="z"){if(typeof DecompressionStream!=="function")throw new Error("This browser cannot open compressed sync codes. Use a newer browser.");raw=await pipeBytes(b,DecompressionStream)}else raw=b;
+  if(!/^[zre][\w-]+$/.test(text))throw new Error("This is not a Life OS sync code.");
+  let raw,auth=null;
+  if(text[0]==="e"){
+    if(!cryptoOk())throw new Error("Encrypted codes need a secure page (https or localhost).");
+    const kid=text.slice(1,12),rec=Object.values(DEVICE.devices).find(d=>d.kid===kid),pend=DEVICE.pending[kid],secret=rec?rec.secret:pend?pend.secret:null;
+    if(!secret)throw new Error("This code is encrypted for a pairing this device does not have. Send from the other device to a new device first, or forget the old pairing there.");
+    let pt;try{pt=new Uint8Array(await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64u(text.slice(12,28))},await aesKey(secret),unb64u(text.slice(28))))}
+    catch(e){throw new Error("The code could not be decrypted. It may be damaged, cut short or from an old pairing.")}
+    if(pt[0]===1){if(typeof DecompressionStream!=="function")throw new Error("This browser cannot open compressed sync codes. Use a newer browser.");raw=await pipeBytes(pt.subarray(1),DecompressionStream)}else raw=pt.subarray(1);
+    auth={kid,secret,device:rec||null,pending:!rec}}
+  else{
+    const b=unb64u(text.slice(1));
+    if(text[0]==="z"){if(typeof DecompressionStream!=="function")throw new Error("This browser cannot open compressed sync codes. Use a newer browser.");raw=await pipeBytes(b,DecompressionStream)}else raw=b}
   let p;try{p=JSON.parse(new TextDecoder().decode(raw))}catch(e){throw new Error("The sync code is damaged. Try again.")}
+  if(isObj(p)){delete p._auth;if(auth)p._auth=auth}
   return p}
+/* Builds the text for a send. target: null = plain, "new" = plain and offers to be remembered, or a trusted device id = encrypted for that device. */
+async function syncPayloadFor(target){
+  if(target&&target!=="new"){
+    const d=DEVICE.devices[target];if(!d)throw new Error("That device is no longer in your list.");
+    if(!cryptoOk())throw new Error("Encryption needs a secure page (https or localhost). Use a plain send instead.");
+    return syncEncrypt(syncPacket(),d.secret)}
+  if(target==="new"&&cryptoOk()){
+    const secret=newSecret(),kid=kidOf(secret),old=Date.now()-7*864e5;
+    DEVICE.pending[kid]={secret,at:Date.now()};
+    Object.keys(DEVICE.pending).sort((a,b)=>DEVICE.pending[b].at-DEVICE.pending[a].at).forEach((k,i)=>{if(i>=5||DEVICE.pending[k].at<old)delete DEVICE.pending[k]});
+    saveDevice();return syncPack(syncPacket({pairSecret:secret}))}
+  return syncPack(syncPacket())}
+const forgetDevice=id=>{delete DEVICE.devices[id];saveDevice()};
+const deviceList=()=>Object.values(DEVICE.devices).sort((a,b)=>((b.last&&b.last.at)||0)-((a.last&&a.last.at)||0));
 /* ---- QR frames: LOS1|session|index|count|checksum|data. Frames can be scanned in any order and repeats are ignored. */
 function syncFrames(payload,size){
   const n=Math.ceil(payload.length/size),sid=rid(4),chk=cyrb53(payload).toString(36),out=[];
@@ -177,7 +219,9 @@ function syncPlan(p){
       if(!diff){sum.same++;return}
       if(k[0]==="h"){if(tomb)sum.goneHabits.push((habits.find(x=>x.id===k.slice(2))||{}).name||"a habit");else if(!had)sum.newHabits.push(v.name)}
       else if("dkne".includes(k[0]))sum.entries++;else sum.other++})}
-  return{take,sum,from:{id:str(p.dev,20),name:str(p.dn,40)||"another device",at:+p.at||0},acct:{id:str(p.acct,40),name:str(p.an,40),mismatch:!!p.acct&&p.acct!==me.id},changes:take.filter(x=>x.diff).length}}
+  const fromId=str(p.dev,20),au=isObj(p._auth)?p._auth:null,okId=/^d[a-z0-9]{3,19}$/.test(fromId)&&fromId!==DEVICE.id,fname=str(p.dn,40)||"another device";
+  const pairSecret=isObj(p.pair)&&typeof p.pair.secret==="string"&&/^[\w-]{43}$/.test(p.pair.secret)?p.pair.secret:null;
+  return{take,sum,pairNew:!au&&pairSecret&&okId&&cryptoOk()?{id:fromId,name:fname,secret:pairSecret}:null,promote:au&&au.pending&&okId?{id:fromId,name:fname,secret:au.secret}:null,trusted:au&&au.device?au.device:null,from:{id:fromId,name:fname,at:+p.at||0},acct:{id:str(p.acct,40),name:str(p.an,40),mismatch:!!p.acct&&p.acct!==me.id},changes:take.filter(x=>x.diff).length}}
 const planText=pl=>{
   const s=pl.sum,b=[];
   if(s.newHabits.length)b.push("adds "+s.newHabits.length+(s.newHabits.length===1?" habit":" habits")+" ("+s.newHabits.slice(0,4).join(", ")+(s.newHabits.length>4?", …":"")+")");
@@ -225,6 +269,9 @@ function syncApply(plan){
   const F=syncFlat(),S=SYNC.stamps;
   done.forEach(r=>{if(r.tomb){if(!(r.k in F))S[r.k]=[r.t,0]}else if(r.k in F&&canon(F[r.k])===canon(r.v))S[r.k]=[r.t,vh(F[r.k])]});
   writeStamps();
+  const pn=plan.pairNew||plan.promote;
+  if(pn){DEVICE.devices[pn.id]={id:pn.id,name:pn.name,secret:pn.secret,kid:kidOf(pn.secret),since:Date.now(),last:{at:Date.now(),n:plan.changes}};delete DEVICE.pending[kidOf(pn.secret)]}
+  else if(plan.trusted&&DEVICE.devices[plan.trusted.id]){const d=DEVICE.devices[plan.trusted.id];d.name=plan.from.name||d.name;d.last={at:Date.now(),n:plan.changes}}
   DEVICE.last={at:Date.now(),from:plan.from.name,n:plan.changes};DEVICE.log.unshift(DEVICE.last);DEVICE.log.length=Math.min(DEVICE.log.length,5);saveDevice();
   return plan.changes}
 syncStamp();persist();

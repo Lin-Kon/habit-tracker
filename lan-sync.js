@@ -40,23 +40,23 @@ function lanShow(title,help,code,btn){
   show();clearInterval(ovTimer);if(frames.length>1)ovTimer=setInterval(()=>{if(!document.getElementById("qrcv")){clearInterval(ovTimer);return}i=(i+1)%frames.length;show()},350)}
 /* Scans a connection code. kind is "offer" or "answer"; onObj gets the connection description. */
 async function lanScan(title,help,kind,onObj){
-  const me=ov;
-  ovHtml('<h2>'+title+'</h2><p class="meta">'+help+'</p><div class="vid"><video id="ov-video" muted playsinline></video></div><p class="meta" id="ov-status">Starting the camera…</p><div class="meter" style="--c:var(--moss)"><i id="ov-bar" style="width:0%"></i></div>'
-    +'<details><summary>Paste the code instead</summary><textarea id="ov-paste" placeholder="Paste the code here" aria-label="Connection code"></textarea><div class="row wrap"><button class="btn" data-ov="read">Read pasted code</button></div></details><button class="btn" data-ov="close">Cancel</button>');
+  const me=ov,cam=isHandheld();
+  ovHtml('<h2>'+title+'</h2><p class="meta">'+help+'</p>'+(cam?'<div class="vid"><video id="ov-video" muted playsinline></video></div>':"")+'<p class="meta" id="ov-status">'+(cam?"Starting the camera…":"Paste the code from the other device.")+'</p>'+(cam?'<div class="meter" style="--c:var(--moss)"><i id="ov-bar" style="width:0%"></i></div>':"")+pasteBox(!cam)+'<button class="btn" data-ov="close">Cancel</button>');
   const as=frameAssembler(),st=ovq("#ov-status"),bar=ovq("#ov-bar");let finished=false;
   const fin=async payload=>{
     if(finished)return;finished=true;if(ovStop){ovStop();ovStop=null}
     try{const o=await syncUnpack(payload);
       if(!o||o.lan!==1||o.k!==kind||!o.d||o.d.type!==kind||typeof o.d.sdp!=="string"||o.d.sdp.length>20000)throw new Error(kind==="offer"?"That is not a Wi-Fi connection code from the first device.":"That is not the answer code from the second device.");
       await onObj(o.d)}
-    catch(e){finished=false;if(ov===me&&ovq("#ov-status"))ovq("#ov-status").textContent=e.message+" Scan again."}};
+    catch(e){finished=false;if(ov===me&&ovq("#ov-status"))ovq("#ov-status").textContent=e.message+" Try again."}};
   recvFin=fin;
+  if(!cam){const t=ovq("#ov-paste");if(t)t.focus();return}
   const onText=t=>{
     if(finished)return;
-    if(/^(LOSYNC1:)?[zr][\w-]{40,}$/.test(String(t).trim())){fin(t);return}
+    if(CODE_RE.test(String(t).trim())){fin(t);return}
     const r=as.add(t);if(r.bad==="checksum"){st.textContent="A frame was misread. Starting this code again.";bar.style.width="0%";return}if(r.bad)return;
     bar.style.width=Math.round(100*r.got/r.n)+"%";st.textContent="Got "+r.got+" of "+r.n+" frames.";if(r.fresh&&navigator.vibrate)navigator.vibrate(8);if(r.done)fin(r.done)};
-  const stop=await QRScan.start(ovq("#ov-video"),onText,m=>{if(ov===me&&ovq("#ov-status")){ovq("#ov-status").textContent=m;const v=ovq(".vid");if(v)v.hidden=true}});
+  const stop=await QRScan.start(ovq("#ov-video"),onText,m=>{if(ov===me&&ovq("#ov-status")){ovq("#ov-status").textContent=m;const v=ovq(".vid");if(v)v.hidden=true;const d=ovq("details");if(d)d.open=true}});
   if(ov!==me||finished){stop();return}ovStop=stop;if(ovq(".vid")&&!ovq(".vid").hidden)ovq("#ov-status").textContent="Point the camera at the code on the other device."}
 /* ---- first device */
 async function lanHost(){
@@ -69,10 +69,10 @@ async function lanHost(){
     await pc.setLocalDescription(await pc.createOffer());await lanGathered(pc);
     const code=await syncPack({lan:1,k:"offer",d:{type:"offer",sdp:pc.localDescription.sdp}});
     if(ov!==me)return;
-    lanShow("Step 1 of 2: show this code","On the other device open Profile and choose Join over Wi-Fi, then scan this code. When it shows its own code, tap the button below.",code,{id:"scananswer",label:"Next: scan its code"})}
+    lanShow("Step 1 of 2: show this code","On the other device open Profile and choose Join over Wi-Fi, then scan this code (or copy it as text). When it shows its own code, tap the button below.",code,{id:"scananswer",label:isHandheld()?"Next: scan its code":"Next: paste its code"})}
   catch(e){if(ov===me)ovHtml('<h2>Could not start</h2><p class="err">'+esc(e.message)+'</p><button class="add" data-ov="close">Close</button>')}}
 async function lanScanAnswer(){
-  await lanScan("Step 2 of 2: scan its code","Point the camera at the code now shown on the other device.","answer",async d=>{
+  await lanScan("Step 2 of 2: "+(isHandheld()?"scan":"paste")+" its code",isHandheld()?"Point the camera at the code now shown on the other device.":"On the other device choose Show code as text, copy it and paste it here.","answer",async d=>{
     if(!LAN)throw new Error("The connection was closed. Start again.");
     await LAN.pc.setRemoteDescription({type:"answer",sdp:d.sdp});
     ovHtml('<h2>Connecting…</h2><p class="meta">This takes a few seconds. Keep both screens on.</p><button class="btn" data-ov="close">Cancel</button>');lanWait(25000)})}
@@ -80,7 +80,7 @@ async function lanScanAnswer(){
 async function lanJoin(){
   if(!lanOk())return;
   const me=openOv('<h2>Join over Wi-Fi</h2><p class="meta">Starting…</p><button class="btn" data-ov="close">Cancel</button>');
-  await lanScan("Step 1 of 2: scan the first device","On the first device open Profile and choose Connect over Wi-Fi. Point this camera at the code it shows.","offer",async d=>{
+  await lanScan("Step 1 of 2: "+(isHandheld()?"scan":"paste")+" the first device","On the first device open Profile and choose Connect over Wi-Fi. "+(isHandheld()?"Point this camera at the code it shows.":"There, choose Show code as text, copy it and paste it here."),"offer",async d=>{
     const pc=new RTCPeerConnection({iceServers:[]});lanClose();LAN={pc,live:false,timer:null};
     pc.ondatachannel=e=>lanWire(e.channel);
     pc.onconnectionstatechange=()=>{if(LAN&&LAN.pc===pc&&pc.connectionState==="failed"&&!LAN.live)lanFail()};
